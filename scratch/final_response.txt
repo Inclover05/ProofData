@@ -1,0 +1,83 @@
+PROOFDATA FORENSIC MILESTONE AUDIT
+
+Baseline lint:
+PASS
+
+Baseline Direct tests:
+Passed: 17
+Failed: 0
+Skipped: 0
+
+M1:
+VERIFIED
+Evidence: `tests/direct/test_m1_state.py` validates deployment, warrant creation, persistent storage (requester address, evidence payload, etc.), and multi-warrant independence.
+
+M2:
+VERIFIED
+Evidence: `tests/direct/test_m2_deterministic.py` explicitly proves HTTP prefix validation, explicit field checking, expiration transitioning (`NOT_WARRANTED`), and catching state violation transitions before accessing network features.
+
+M3:
+VERIFIED
+Evidence: `tests/direct/test_m3_retrieval.py` proves identity binding. The URL is treated as a mutable pointer, while the payload content hash natively verified via `Keccak256` acts as the true identity. Valid retrieval triggers AI logic; web/URL failures or hash mutations securely trigger `INCONCLUSIVE` or `NOT_WARRANTED`.
+
+M4:
+VERIFIED
+Evidence: `tests/direct/test_m4_adjudication.py` tests separation of evidence strings and LLM instructions. Asserts structured coercion (`WARRANTED`, `CONDITIONAL`, `NOT_WARRANTED`, `INCONCLUSIVE`). Tests prove that if LLMs hallucinate invalid statuses, the contract gracefully intercepts and coerces the output to `INCONCLUSIVE`.
+
+M5:
+VERIFIED
+Equivalence security:
+SECURE
+Evidence: `contracts/reliance_warrant.py` successfully uses `gl.vm.run_nondet_unsafe`.
+LEADER FUNCTION: Fetches the payload, validates hashes, sends the structured prompt to `exec_prompt`, and extracts a strict status/reason JSON mapping.
+VALIDATOR: `validator_fn` explicitly re-runs `leader_fn()` against its own LLM instance and asserts `leader_result.calldata.get("status") == my_result.get("status")`.
+DECISION-BEARING FIELDS: Only `status` is required to strictly match.
+ALLOWED NONDETERMINISM: The natural language `reason` string may vary arbitrarily without breaking transaction consensus.
+ERROR BEHAVIOR: Validator gracefully rejects `leader_result` if it is not an instance of `gl.vm.Return` (e.g. `UserError`).
+Tested extensively via `test_m5_equivalence.py`.
+
+M6:
+VERIFIED
+Same evidence:
+YES
+Low-risk verdict:
+WARRANTED
+High-risk verdict:
+NOT_WARRANTED
+Consensus:
+YES
+Evidence: Confirmed through live transaction execution on GenLayer Studionet in `tests/integration/test_m6_purpose_sensitive.py`. The exact same `"Hello World. This is my evidence."` evidence returned `WARRANTED` on the "Just summarizing" purpose, and `NOT_WARRANTED` on the "$1M investment" purpose.
+
+M7:
+VERIFIED
+Evidence: `tests/direct/test_m7_expiry_inconclusive.py` verifies unavailable evidence gracefully defaults to `INCONCLUSIVE` while expiry time-bounds correctly evaluate to `NOT_WARRANTED`.
+
+M8:
+VERIFIED
+Evidence: `tests/direct/test_m8_adversarial.py` verifies that prompt injection attacks containing "output HACKED" are neutralized since the status does not match the valid enum, forcing an `INCONCLUSIVE` output, protecting the consensus bounds. Contradictory evidence and hash mismatch cases are successfully bounded.
+
+M9 GLSim:
+NOT VERIFIED
+Evidence: GLSim integration test fails due to a `py-genlayer` serialization bug `invalid type <class 'genlayer.py.types.Address'>` during view method `get_warrant.call()`, and consensus execution failures (`Status: 7`) likely from unconfigured local LLMs.
+
+M10 Studionet:
+VERIFIED
+Evidence: `test_m6_purpose_sensitive.py` cleanly runs on the live StudioNet network without the GLSim view bug. Final test returns clean exit code 0 with fully validated states.
+
+M11:
+NOT VERIFIED
+
+Previous M11 claim:
+OVERSTATED
+
+Current blockers:
+- M9 (GLSim) currently unsupported/failed natively due to `genlayer-test` local serialization bugs and LLM mock dependencies.
+
+Current known issues:
+- `genlayer-test` local `get_warrant.call()` serialization fails on dataclasses containing `Address` types in GLSim.
+
+Last fully verified milestone:
+M10
+
+SAFE TO BEGIN PRODUCT/UI PHASE:
+NO

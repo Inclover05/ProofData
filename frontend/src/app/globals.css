@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+:root {
+  --background: #FBFBFB;
+  --surface: #FFFFFF;
+  --glass-surface: rgba(255, 255, 255, 0.6);
+  --text-primary: #111111;
+  --text-secondary: #555555;
+  --rules-borders: #E0E0E0;
+  --accent: #0055FF;
+
+  --verdict-warranted-text: #005924;
+  --verdict-warranted-bg: #E3F5EA;
+  --verdict-conditional-text: #944C00;
+  --verdict-conditional-bg: #FFF0D4;
+  --verdict-not-warranted-text: #8A0012;
+  --verdict-not-warranted-bg: #FEE7EA;
+  --verdict-inconclusive-text: #4A5568;
+  --verdict-inconclusive-bg: #EDF2F7;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0A0A0A;
+    --surface: #111111;
+    --glass-surface: rgba(20, 20, 20, 0.6);
+    --text-primary: #EDEDED;
+    --text-secondary: #A0A0A0;
+    --rules-borders: #333333;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-glass-surface: var(--glass-surface);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-rules: var(--rules-borders);
+  --color-accent: var(--accent);
+
+  --color-verdict-warranted-text: var(--verdict-warranted-text);
+  --color-verdict-warranted-bg: var(--verdict-warranted-bg);
+  --color-verdict-conditional-text: var(--verdict-conditional-text);
+  --color-verdict-conditional-bg: var(--verdict-conditional-bg);
+  --color-verdict-not-warranted-text: var(--verdict-not-warranted-text);
+  --color-verdict-not-warranted-bg: var(--verdict-not-warranted-bg);
+  --color-verdict-inconclusive-text: var(--verdict-inconclusive-text);
+  --color-verdict-inconclusive-bg: var(--verdict-inconclusive-bg);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--text-primary);
+  font-family: var(--font-sans), sans-serif;
+}
