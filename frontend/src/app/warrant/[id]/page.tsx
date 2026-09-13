@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { use } from "react";
+import { createClient, chains } from "genlayer-js";
+import { AdjudicateAction } from "@/components/AdjudicateAction";
 
-type WarrantStatus = "PENDING" | "WARRANTED" | "CONDITIONAL" | "NOT_WARRANTED" | "INCONCLUSIVE";
+type WarrantStatus = "PENDING" | "WARRANTED" | "CONDITIONAL" | "NOT_WARRANTED" | "INCONCLUSIVE" | "PENDING_AI";
 
 interface WarrantData {
   id: string;
@@ -13,174 +14,263 @@ interface WarrantData {
   requester: string;
   timestamp: string;
   reason: string;
-  conditions?: string;
 }
 
-const DEMO_DATA: Record<string, WarrantData> = {
-  "pending-demo": {
-    id: "wd_0x7f8a9b2c3d4e5f6g",
-    status: "PENDING",
-    evidenceUrl: "https://api.example.com/market-report/v2",
-    evidenceHash: "0xPENDING...",
-    intendedAction: "Execute an autonomous trade of 50 WETH based on this intelligence report.",
-    riskLevel: "HIGH",
-    requester: "0x1234...5678",
-    timestamp: new Date().toISOString(),
-    reason: "Awaiting GenLayer consensus to validate evidence against intended consequence.",
-  },
-  "demo": {
-    id: "wd_0x9a8b7c6d5e4f3g2h",
-    status: "NOT_WARRANTED",
-    evidenceUrl: "https://api.example.com/market-report/v2",
-    evidenceHash: "0x8f7d9a1b2c3d4e5f6g7h8i9j0k1l2m3n",
-    intendedAction: "Execute an autonomous trade of 50 WETH based on this intelligence report.",
-    riskLevel: "HIGH",
-    requester: "0x1234...5678",
-    timestamp: "2026-09-12T14:30:00Z",
-    reason: "Evidence is insufficient for a HIGH risk action. The source material lacks cryptographically verifiable signatures and contains probabilistic language ('likely', 'potentially') unsuitable for autonomous execution.",
-  },
-  "demo-low": {
-    id: "wd_0x1a2b3c4d5e6f7g8h",
-    status: "WARRANTED",
-    evidenceUrl: "https://api.example.com/market-report/v2",
-    evidenceHash: "0x8f7d9a1b2c3d4e5f6g7h8i9j0k1l2m3n",
-    intendedAction: "Include findings in internal weekly research summary.",
-    riskLevel: "LOW",
-    requester: "0x1234...5678",
-    timestamp: "2026-09-12T14:35:00Z",
-    reason: "Evidence is sufficient for LOW risk research purposes. The source is a known analytical endpoint and the contents are internally consistent.",
-  }
-};
-
-const STATUS_CONFIG = {
+const STATUS_CONFIG: Record<string, { label: string; textClass: string; bgClass: string; borderClass: string }> = {
   PENDING: {
-    label: "PENDING CONSENSUS",
-    textClass: "text-text-primary",
-    bgClass: "bg-rules-borders",
-    borderClass: "border-rules-borders"
+    label: "PENDING (DRAFT)",
+    textClass: "text-[#4A5568]",
+    bgClass: "bg-[#E2E8F0]",
+    borderClass: "border-[#4A5568]/20"
+  },
+  PENDING_AI: {
+    label: "AWAITING ADJUDICATION",
+    textClass: "text-[#4A5568]",
+    bgClass: "bg-[#E2E8F0]",
+    borderClass: "border-[#4A5568]/20"
   },
   WARRANTED: {
     label: "WARRANTED",
-    textClass: "text-[#005924]", // Using raw hex for precise matching as defined in tokens
-    bgClass: "bg-[#E3F5EA]",
-    borderClass: "border-[#005924]/20"
+    textClass: "text-[#005530]",
+    bgClass: "bg-[#E6F4EA]",
+    borderClass: "border-[#005530]/20"
   },
   CONDITIONAL: {
     label: "CONDITIONAL",
-    textClass: "text-[#944C00]",
-    bgClass: "bg-[#FFF0D4]",
-    borderClass: "border-[#944C00]/20"
+    textClass: "text-[#B05B00]",
+    bgClass: "bg-[#FFF0E0]",
+    borderClass: "border-[#B05B00]/20"
   },
   NOT_WARRANTED: {
     label: "NOT WARRANTED",
-    textClass: "text-[#8A0012]",
+    textClass: "text-[#800010]",
     bgClass: "bg-[#FEE7EA]",
-    borderClass: "border-[#8A0012]/20"
+    borderClass: "border-[#800010]/20"
   },
   INCONCLUSIVE: {
     label: "INCONCLUSIVE",
     textClass: "text-[#4A5568]",
-    bgClass: "bg-[#EDF2F7]",
+    bgClass: "bg-[#E2E8F0]",
     borderClass: "border-[#4A5568]/20"
   }
 };
 
-export default function WarrantPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = use(params);
-  const data = DEMO_DATA[resolvedParams.id] || DEMO_DATA["demo"];
-  const config = STATUS_CONFIG[data.status];
+export default async function WarrantPage({ params }: { params: { id: string } | Promise<{ id: string }> }) {
+  // Support both sync and async params resolving for Next.js 15+
+  const resolvedParams = await Promise.resolve(params);
+  
+  let data: WarrantData | null = null;
+  let errorMsg = null;
+  const isDemo = resolvedParams.id.startsWith("demo");
+
+  if (isDemo) {
+    if (resolvedParams.id === "demo-low") {
+      data = {
+        id: "wd_a7b93c8",
+        status: "WARRANTED",
+        evidenceUrl: "https://example.com/api/v1/auth/session/token/validate",
+        evidenceHash: "0x8f4b2c1e9d3a7f6c5b4e1d2a3f9c8b7a6d5e4f3c2b1a0d9e8f7c6b5a4d3c2b1a",
+        intendedAction: "Read user profile",
+        riskLevel: "LOW",
+        requester: "0x2B01a6d4731d1603269B4ffB686522a3ED9D5f3e",
+        timestamp: "2024-05-18T10:43:21Z",
+        reason: "The evidence clearly authorizes reading the user profile."
+      };
+    } else {
+      data = {
+        id: "wd_7f9c21a",
+        status: "NOT_WARRANTED",
+        evidenceUrl: "https://example.com/api/v1/auth/session/token/validate",
+        evidenceHash: "0x8f4b2c1e9d3a7f6c5b4e1d2a3f9c8b7a6d5e4f3c2b1a0d9e8f7c6b5a4d3c2b1a",
+        intendedAction: "Execute $10,000 wire transfer",
+        riskLevel: "HIGH",
+        requester: "0x2B01a6d4731d1603269B4ffB686522a3ED9D5f3e",
+        timestamp: "2024-05-18T10:45:03Z",
+        reason: "The token validates identity, but does not provide sufficient authorization for a high-value wire transfer."
+      };
+    }
+  } else {
+    try {
+      const client = createClient({ chain: chains.studionet });
+      const contractAddress = process.env.NEXT_PUBLIC_PROOFDATA_CONTRACT_ADDRESS as `0x${string}`;
+      
+      const result = await client.readContract({
+        address: contractAddress,
+        functionName: 'get_warrant',
+        args: [resolvedParams.id]
+      });
+
+      if (result && typeof result === 'object' && 'status' in result) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const w = result as any;
+        data = {
+          id: w.id || resolvedParams.id,
+          status: w.status as WarrantStatus,
+          evidenceUrl: w.evidence_ref || "Unknown",
+          evidenceHash: w.expected_hash || "Unknown",
+          intendedAction: w.purpose || "Unknown",
+          riskLevel: w.risk_level || "Unknown",
+          requester: w.requester || "Unknown",
+          timestamp: new Date().toISOString(), // Fallback
+          reason: w.reason || "No explicit reason was returned."
+        };
+      } else {
+        errorMsg = "Warrant found, but format is invalid.";
+      }
+    } catch (e: unknown) {
+      errorMsg = "Not found on GenLayer network.";
+      console.warn("Warrant read failed:", e);
+    }
+  }
+
+  if (errorMsg || !data) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-16">
+        <h1 className="text-4xl font-bold text-red-500 mb-4">{errorMsg || "UNKNOWN ERROR"}</h1>
+        <p className="text-text-secondary">Unable to load reliance warrant: {resolvedParams.id}</p>
+        <div className="mt-8">
+          <Link href="/warrant/demo" className="text-brand hover:underline mr-4">View High Risk Demo</Link>
+        </div>
+      </div>
+    );
+  }
+
+  const config = STATUS_CONFIG[data.status] || STATUS_CONFIG["PENDING"];
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-16 w-full">
-      {/* Dossier Shell */}
-      <div className="bg-surface border border-rules shadow-sm">
-        
-        {/* Header / Verdict */}
-        <div className={`p-8 md:p-12 border-b ${config.borderClass} ${config.bgClass} flex flex-col md:flex-row md:items-end justify-between gap-6`}>
-          <div>
-            <div className="text-xs uppercase tracking-widest font-mono mb-2 opacity-70 {config.textClass}">Reliance Warrant // {data.id}</div>
-            <h1 className={`text-4xl md:text-5xl font-bold tracking-tight ${config.textClass}`}>
+    <div className="flex-1 flex flex-col items-center justify-center relative w-full overflow-hidden py-16 px-6">
+      <div className="absolute inset-0 z-0 bg-bg-deep-graphite pointer-events-none"></div>
+      <div className="absolute inset-0 z-0 opacity-20 reliance-field pointer-events-none"></div>
+
+      <div className="w-full max-w-4xl relative z-10 bg-[#FDFDFD] text-[#0A0E17] shadow-2xl rounded-sm overflow-visible animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out">
+        <div className={`p-10 md:p-16 border-b rounded-t-sm ${config.borderClass} ${config.bgClass} flex flex-col md:flex-row md:items-end justify-between gap-8 relative overflow-hidden`}>
+          <div className="absolute top-0 right-0 p-8 opacity-15 hidden md:block">
+            {data.status === "WARRANTED" && (
+              <svg width="120" height="120" viewBox="0 0 100 100" fill="none" className={config.textClass}>
+                <circle cx="50" cy="50" r="45" stroke="currentColor" strokeWidth="2" />
+                <path d="M30 50 L45 65 L75 35" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            )}
+            {data.status === "NOT_WARRANTED" && (
+              <svg width="120" height="120" viewBox="0 0 100 100" fill="none" className={config.textClass}>
+                <circle cx="50" cy="50" r="45" stroke="currentColor" strokeWidth="2" />
+                <path d="M35 35 L65 65 M65 35 L35 65" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            )}
+            {data.status === "CONDITIONAL" && (
+              <svg width="120" height="120" viewBox="0 0 100 100" fill="none" className={config.textClass}>
+                <circle cx="50" cy="50" r="45" stroke="currentColor" strokeWidth="2" />
+                <path d="M50 25 L50 60 M50 70 L50 75" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            )}
+            {(data.status === "PENDING" || data.status === "PENDING_AI" || data.status === "INCONCLUSIVE") && (
+              <svg width="120" height="120" viewBox="0 0 100 100" fill="none" className={config.textClass}>
+                <circle cx="50" cy="50" r="45" stroke="currentColor" strokeWidth="1" strokeDasharray="2 4" />
+                <circle cx="50" cy="50" r="38" stroke="currentColor" strokeWidth="0.5" />
+                <path d="M50 15L50 85" stroke="currentColor" strokeWidth="0.5" strokeDasharray="1 3"/>
+                <path d="M15 50L85 50" stroke="currentColor" strokeWidth="0.5" strokeDasharray="1 3"/>
+                <circle cx="50" cy="50" r="28" stroke="currentColor" strokeWidth="1.5" />
+                <path d="M42 50l6 6 10-10" stroke="currentColor" strokeWidth="2" strokeLinecap="square"/>
+              </svg>
+            )}
+          </div>
+          
+          <div className="relative z-10">
+            <div className={`text-[11px] uppercase tracking-[0.2em] font-mono mb-4 font-bold border-b pb-2 inline-block ${config.borderClass} ${config.textClass}`}>
+              RELIANCE WARRANT <span className="opacity-50 mx-2">{"//"}</span> <span className="font-bold tracking-widest">{data.id.replace('warrant-', '').substring(0,8).toUpperCase()}</span>
+            </div>
+            <h1 className={`text-4xl md:text-6xl font-bold tracking-tight ${config.textClass} drop-shadow-sm`}>
               {config.label}
             </h1>
           </div>
-          {data.status === "PENDING" && (
-            <div className="flex items-center gap-3">
-              <span className="relative flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-text-primary opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-text-primary"></span>
+          {(data.status === "PENDING" || data.status === "PENDING_AI") && (
+            <div className="flex items-center gap-3 relative z-10">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#4A5568] opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#4A5568]"></span>
               </span>
-              <span className="text-sm font-mono uppercase tracking-widest">GenVM Processing</span>
+              <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#4A5568]">
+                {data.status === "PENDING_AI" ? "Awaiting Adjudication" : "GenVM Processing"}
+              </span>
             </div>
           )}
         </div>
 
-        {/* Content Body */}
-        <div className="p-8 md:p-12 grid grid-cols-1 md:grid-cols-12 gap-12">
+        <div className="p-10 md:p-16 grid grid-cols-1 md:grid-cols-12 gap-16 relative">
+          <div className="absolute inset-0 z-0 opacity-[0.02] pointer-events-none" style={{ backgroundImage: 'linear-gradient(#0A0E17 1px, transparent 1px), linear-gradient(90deg, #0A0E17 1px, transparent 1px)', backgroundSize: '2rem 2rem' }}></div>
           
-          {/* Main Column */}
-          <div className="md:col-span-8 space-y-10">
-            <section>
-              <h2 className="text-sm font-medium uppercase tracking-wider text-text-secondary border-b border-rules pb-2 mb-4">Adjudication Reason</h2>
-              <p className="text-lg leading-relaxed text-text-primary">
-                {data.reason}
-              </p>
-            </section>
+          <div className="md:col-span-8 space-y-12 relative z-10">
+            {['WARRANTED', 'CONDITIONAL', 'NOT_WARRANTED', 'INCONCLUSIVE'].includes(data.status) && (
+              <section>
+                <h2 className="text-[10px] uppercase tracking-[0.2em] text-[#4A5568] border-b border-[#0A0E17]/10 pb-3 mb-4 font-semibold">Adjudication Reason</h2>
+                <p className="text-lg leading-loose text-[#0A0E17]">
+                  {data.reason || "No explicit reason was returned by the validator network."}
+                </p>
+              </section>
+            )}
 
             <section>
-              <h2 className="text-sm font-medium uppercase tracking-wider text-text-secondary border-b border-rules pb-2 mb-4">Intended Action</h2>
-              <p className="leading-relaxed text-text-primary">
+              <h2 className="text-[10px] uppercase tracking-[0.2em] text-[#4A5568] border-b border-[#0A0E17]/10 pb-3 mb-4 font-semibold">Intended Action</h2>
+              <p className="leading-relaxed text-[#0A0E17] font-medium">
                 {data.intendedAction}
               </p>
             </section>
 
             <section>
-              <h2 className="text-sm font-medium uppercase tracking-wider text-text-secondary border-b border-rules pb-2 mb-4">Evidence Identity</h2>
-              <div className="bg-background border border-rules p-4 space-y-3">
+              <h2 className="text-[10px] uppercase tracking-[0.2em] text-[#4A5568] border-b border-[#0A0E17]/10 pb-3 mb-4 font-semibold">Evidence Identity</h2>
+              <div className="bg-[#F5F7FA] border border-[#0A0E17]/10 p-5 space-y-4 rounded-sm">
                 <div>
-                  <div className="text-xs text-text-secondary font-mono mb-1">Source URL</div>
-                  <a href={data.evidenceUrl} className="text-sm text-accent hover:underline break-all block">{data.evidenceUrl}</a>
+                  <div className="text-[10px] text-[#4A5568] font-mono mb-1 uppercase tracking-widest">Source URL</div>
+                  <a href={data.evidenceUrl} className="text-sm text-[#2B5CFF] hover:underline break-all block">{data.evidenceUrl}</a>
                 </div>
                 <div>
-                  <div className="text-xs text-text-secondary font-mono mb-1">Fingerprint (SHA-256)</div>
-                  <div className="text-sm font-mono break-all bg-surface p-2 border border-rules-borders/50 flex items-center gap-2">
-                    <svg className="w-4 h-4 text-text-secondary shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" /></svg>
+                  <div className="text-[10px] text-[#4A5568] font-mono mb-2 uppercase tracking-widest font-bold">Fingerprint (SHA-256)</div>
+                  <div className="text-base sm:text-lg font-mono break-all bg-[#0A0E17] text-white p-4 border border-[#0A0E17]/10 flex items-center gap-3 shadow-md">
+                    <svg className="w-5 h-5 text-[#2B5CFF] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" /></svg>
                     {data.evidenceHash}
                   </div>
                 </div>
               </div>
             </section>
+            
+            {data.status === "PENDING_AI" && !isDemo && (
+              <AdjudicateAction warrantId={data.id} />
+            )}
+            
           </div>
 
-          {/* Metadata Rail */}
-          <div className="md:col-span-4 space-y-8">
+          <div className="md:col-span-4 space-y-10 relative z-10 border-t md:border-t-0 md:border-l border-[#0A0E17]/10 pt-10 md:pt-0 md:pl-10">
             <div>
-              <h2 className="text-xs font-medium uppercase tracking-wider text-text-secondary mb-2">Risk Level</h2>
-              <div className="text-sm font-semibold">{data.riskLevel}</div>
+              <h2 className="text-[10px] uppercase tracking-[0.2em] text-[#4A5568] mb-2 font-semibold">Risk Level</h2>
+              <div className="text-sm font-bold tracking-wider">{data.riskLevel}</div>
             </div>
             
+            {isDemo && (
+              <div>
+                <h2 className="text-[10px] uppercase tracking-[0.2em] text-[#4A5568] mb-2 font-semibold">Timestamp</h2>
+                <div className="text-xs font-mono">{new Date(data.timestamp).toLocaleString()}</div>
+              </div>
+            )}
+
             <div>
-              <h2 className="text-xs font-medium uppercase tracking-wider text-text-secondary mb-2">Timestamp</h2>
-              <div className="text-sm font-mono">{new Date(data.timestamp).toLocaleString()}</div>
+              <h2 className="text-[10px] uppercase tracking-[0.2em] text-[#4A5568] mb-2 font-semibold">Requester</h2>
+              <div className="text-xs font-mono break-all">{data.requester}</div>
             </div>
 
             <div>
-              <h2 className="text-xs font-medium uppercase tracking-wider text-text-secondary mb-2">Requester</h2>
-              <div className="text-sm font-mono">{data.requester}</div>
-            </div>
-
-            <div>
-              <h2 className="text-xs font-medium uppercase tracking-wider text-text-secondary mb-2">Protocol</h2>
-              <div className="text-sm font-mono">GenLayer (Studionet)</div>
+              <h2 className="text-[10px] uppercase tracking-[0.2em] text-[#4A5568] mb-2 font-semibold">Protocol</h2>
+              <div className="text-xs font-mono">GenLayer (Studionet)</div>
             </div>
           </div>
-
         </div>
       </div>
       
-      {/* Debug/Demo navigation */}
-      <div className="mt-8 flex gap-4 justify-center text-sm font-mono text-text-secondary">
-        <Link href="/warrant/demo-low" className="hover:text-text-primary underline">Demo: LOW (Warranted)</Link>
-        <Link href="/warrant/demo" className="hover:text-text-primary underline">Demo: HIGH (Not Warranted)</Link>
+      <div className="mt-12 flex flex-col md:flex-row gap-4 md:gap-8 justify-center items-center text-[10px] font-mono tracking-widest text-text-secondary relative z-10">
+        <Link href="/warrant/warrant-cb5653e5-76f4-4dcd-9ae4-d22f81786fea" className="hover:text-white transition-colors border border-[#4A5568]/50 px-4 py-2">LOAD P3 FIXTURE (ADJUDICATE)</Link>
+        <div className="flex gap-4">
+          <Link href="/warrant/demo-low" className="hover:text-white transition-colors">DEMO: LOW</Link>
+          <Link href="/warrant/demo" className="hover:text-white transition-colors">DEMO: HIGH</Link>
+        </div>
       </div>
     </div>
   );

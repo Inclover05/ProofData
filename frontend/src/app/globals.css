@@ -1,43 +1,59 @@
 @import "tailwindcss";
 
 :root {
-  --background: #FBFBFB;
-  --surface: #FFFFFF;
-  --glass-surface: rgba(255, 255, 255, 0.6);
-  --text-primary: #111111;
-  --text-secondary: #555555;
-  --rules-borders: #E0E0E0;
-  --accent: #0055FF;
+  /* Richer atmospheric palette */
+  --bg-dark-slate: #050810;
+  --bg-deep-graphite: #0a0e17;
+  --bg-midnight-navy: #0d121f;
+  --bg-cool-slate: #151a28;
+  
+  --surface-ivory: #FDFDFD;
+  --surface-pale-gray: #F5F7FA;
+  
+  --accent-cobalt: #2B5CFF;
+  --accent-glow: rgba(43, 92, 255, 0.4);
+  
+  --glass-bg: rgba(13, 18, 31, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-inner-light: rgba(255, 255, 255, 0.03);
 
-  --verdict-warranted-text: #005924;
+  --text-primary: #F0F4F8;
+  --text-secondary: #8E9BB0;
+  --text-dark: #0A0E17;
+  --text-dark-secondary: #4A5568;
+
+  --rules-dark: rgba(255, 255, 255, 0.08);
+  --rules-light: rgba(0, 0, 0, 0.1);
+
+  /* Verdict Semantics */
+  --verdict-warranted-text: #004D20;
   --verdict-warranted-bg: #E3F5EA;
-  --verdict-conditional-text: #944C00;
+  --verdict-conditional-text: #8A4600;
   --verdict-conditional-bg: #FFF0D4;
-  --verdict-not-warranted-text: #8A0012;
+  --verdict-not-warranted-text: #800010;
   --verdict-not-warranted-bg: #FEE7EA;
   --verdict-inconclusive-text: #4A5568;
   --verdict-inconclusive-bg: #EDF2F7;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0A0A0A;
-    --surface: #111111;
-    --glass-surface: rgba(20, 20, 20, 0.6);
-    --text-primary: #EDEDED;
-    --text-secondary: #A0A0A0;
-    --rules-borders: #333333;
-  }
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-surface: var(--surface);
-  --color-glass-surface: var(--glass-surface);
+  --color-background: var(--bg-deep-graphite);
+  --color-surface: var(--surface-ivory);
+  --color-surface-dark: var(--bg-cool-slate);
+  --color-bg-dark-slate: var(--bg-dark-slate);
+  --color-bg-deep-graphite: var(--bg-deep-graphite);
+  --color-bg-midnight-navy: var(--bg-midnight-navy);
+  --color-bg-cool-slate: var(--bg-cool-slate);
+  --color-surface-ivory: var(--surface-ivory);
+  --color-surface-pale-gray: var(--surface-pale-gray);
   --color-text-primary: var(--text-primary);
   --color-text-secondary: var(--text-secondary);
-  --color-rules: var(--rules-borders);
-  --color-accent: var(--accent);
+  --color-text-dark: var(--text-dark);
+  --color-text-dark-secondary: var(--text-dark-secondary);
+  --color-rules: var(--rules-dark);
+  --color-rules-light: var(--rules-light);
+  --color-accent: var(--accent-cobalt);
+  --color-glass-border: var(--glass-border);
 
   --color-verdict-warranted-text: var(--verdict-warranted-text);
   --color-verdict-warranted-bg: var(--verdict-warranted-bg);
@@ -53,7 +69,38 @@
 }
 
 body {
-  background-color: var(--background);
+  background-color: var(--bg-dark-slate);
   color: var(--text-primary);
   font-family: var(--font-sans), sans-serif;
+  background-image: radial-gradient(circle at top right, var(--bg-midnight-navy), var(--bg-dark-slate) 70%);
+  background-attachment: fixed;
+}
+
+/* Premium Glass utility */
+.premium-glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  box-shadow: inset 0 1px 0 0 var(--glass-inner-light), 0 4px 24px -4px rgba(0,0,0,0.4);
+}
+@media (max-width: 768px) {
+  .premium-glass {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: var(--bg-midnight-navy);
+  }
+}
+
+/* Reliance Field pattern */
+.reliance-field {
+  background-image: linear-gradient(var(--rules-dark) 1px, transparent 1px), linear-gradient(90deg, var(--rules-dark) 1px, transparent 1px);
+  background-size: 60px 60px;
+  background-position: center;
+  mask-image: radial-gradient(circle at center, black 30%, transparent 80%);
+  -webkit-mask-image: radial-gradient(circle at center, black 30%, transparent 80%);
+}
+
+.glow-text {
+  text-shadow: 0 0 20px var(--accent-glow);
 }

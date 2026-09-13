@@ -89,25 +89,61 @@ Use motion only for meaning (Emotion, Visual Narrative, Motion Craft).
 
 ---
 
-## DESIGN SYSTEM V0
+## DESIGN SYSTEM V1 (P1.6 Material Hierarchy)
 
-### Semantic Tokens (Provisional)
+### Semantic Tokens
 
 #### Foundation
-- `color-background`: `#FBFBFB` (Very subtle off-white for physical document feel) or `#0A0A0A` (Deep technical black for dark mode).
-- `color-surface`: `#FFFFFF` (Light) / `#111111` (Dark) - Opaque, authoritative.
-- `color-glass-surface`: `rgba(255, 255, 255, 0.6)` + backdrop-blur / `rgba(20, 20, 20, 0.6)` + backdrop-blur.
-- `color-text-primary`: `#111111` (Light) / `#EDEDED` (Dark) - High contrast for deep reading.
-- `color-text-secondary`: `#555555` (Light) / `#A0A0A0` (Dark) - For metadata and rails.
-- `color-rules-borders`: `#E0E0E0` (Light) / `#333333` (Dark) - Sharp, thin structural lines.
-- `color-accent`: `#0055FF` (Vivid technical blue for active interactive elements).
+- `color-bg-dark-slate`: `#050810` (Deep atmosphere)
+- `color-bg-deep-graphite`: `#0a0e17` (Protocol metadata surface)
+- `color-bg-midnight-navy`: `#0d121f` (Atmosphere / deep structure)
+- `color-bg-cool-slate`: `#151a28` (Calmer institutional slate / Evidence surface)
+- `color-surface-ivory`: `#FDFDFD` (Opaque paper/document material for Reliance Dossiers)
+- `color-surface-pale-gray`: `#F5F7FA` (Slightly differentiated institutional surface)
+- `color-text-primary`: `#F0F4F8` (For dark surfaces)
+- `color-text-secondary`: `#8E9BB0`
+- `color-text-dark`: `#0A0E17` (For light dossier surfaces)
+- `color-text-dark-secondary`: `#4A5568`
+- `color-rules`: `rgba(255, 255, 255, 0.08)` (Dark surfaces)
+- `color-rules-light`: `rgba(0, 0, 0, 0.1)` (Light surfaces)
+- `color-accent`: `#2B5CFF` (Restrained cobalt)
 
 #### Verdict Semantics (Foreground / Background pairs)
-- `color-verdict-warranted-text`: `#005924`
+- `color-verdict-warranted-text`: `#004D20`
 - `color-verdict-warranted-bg`: `#E3F5EA`
-- `color-verdict-conditional-text`: `#944C00`
+- `color-verdict-conditional-text`: `#8A4600`
 - `color-verdict-conditional-bg`: `#FFF0D4`
-- `color-verdict-not-warranted-text`: `#8A0012`
+- `color-verdict-not-warranted-text`: `#800010`
 - `color-verdict-not-warranted-bg`: `#FEE7EA`
 - `color-verdict-inconclusive-text`: `#4A5568`
 - `color-verdict-inconclusive-bg`: `#EDF2F7`
+# Future Frontend Revamp (Post-Core)
+
+## A. Interaction Bubble / Liquid Hover Lens
+On pointer-capable desktop devices:
+- When the pointer hovers an interactive target (buttons, navigation links, wallet choices, cards), it gains a soft, premium interaction bubble/lens.
+- Desired feeling: pointer approaches target -> subtle translucent bubble expands around the interactive area -> target becomes unmistakably active -> on mouse-down/click the bubble gently compresses -> on release it settles back.
+- Purpose: Communicates "this is clickable" and "your pointer is currently over this control".
+- Implementation guidelines: Do NOT make every static element react, do NOT obscure text, do NOT create a distracting custom cursor gimmick. Prefer CSS pseudo-elements, small scale transforms, subtle border/refraction effects, controlled blur, or soft highlight. Performance must remain lightweight.
+- Respect `prefers-reduced-motion`.
+- Touch devices: Do NOT emulate hover. Use proper pressed/focus states instead.
+- Keyboard focus: Must receive an equally clear visual affordance.
+
+## B. Color / Atmosphere Revamp
+The current frontend is considered too plain and uniformly dark. 
+The future visual pass will introduce more emotional depth while preserving institutional trust.
+- Avoid: rainbow Web3, cyberpunk, NFT neon, generic gradient SaaS.
+- Explore: A richer restrained system around deep graphite / midnight, luminous cobalt, cool blue, controlled cyan/teal depth, warm ivory/document material, subtle atmospheric gradients, and semantic verdict colors.
+- Route Character:
+  - HOME: most atmospheric and memorable
+  - CREATE: premium technical workspace
+  - WARRANT: authoritative document/dossier
+  - COMPARE: high-impact analytical field
+- The site should feel premium, alive, futuristic, trustworthy, interactive.
+
+## C. Frontend Revamp Timing
+Do NOT start this redesign until the core flow is proven:
+1. wallet connection
+2. real write
+3. transaction lifecycle
+4. finalized warrant read

@@ -155,3 +155,46 @@ Running the tests inside the Linux environment successfully bypassed the Windows
 ## [Frontend P1 Validation - 2026-09-12]
 - Frontend compiles successfully. No lint or TS errors.
 - All routes verified for responsive behavior and accessibility (contrast). No modified Intelligent Contracts.
+
+## [Frontend P1.6 Visual QA Validation - 2026-09-12]
+**Status:** PASS
+- Ran `./scripts/visual-qa.sh P1.6`.
+- Verified desktop (1440x1000) and mobile (390x844) layouts for `/`, `/create`, `/warrant/demo`, and `/compare`.
+- Fixed 404 missing resource console error (`noise.png`). Final console logs contained zero errors.
+- Confirmed no unintentional horizontal overflow across all routes.
+- Lint, typecheck, and production build all passed.
+- P1.6 changes visually verified and logged in `docs/visual-reviews/P1.6/VISUAL_REVIEW.md`.
+
+## P2-R Recovery & P2 Read Integration
+**Date:** 2026-09-13
+**Status:** PASS
+
+### Details
+- Previous M10 deployment was not persisted and GenLayer explorer was unavailable, so a fresh Studionet deployment was required.
+- Verified contract with GenVM lint and existing direct tests.
+- Re-deployed `ProofDataRelianceLayer` to `0xE8B906DA3Bc2E2c40e9B2C3A8450B50a96f20d89` on Studionet.
+- Created `warrant-1` using `https://raw.githubusercontent.com/npm/cli/latest/LICENSE` as evidence and adjudicated it successfully (`WARRANTED`).
+- Implemented account-free GenLayerJS read client on `/warrant/[id]` which accurately fetches and maps real contract state from Studionet to the frontend UI without a wallet.
+- Verified frontend typecheck, lint, production build, and automated visual QA.
+
+### P3 - Wallet Write Integration
+- GenVM Lint: PASS (checksum unchanged 89f...)
+- Direct tests: PASS (23 passed)
+- Frontend build: PASS
+- Visual QA: PASS
+- Real Write Transaction: CONDITIONAL (Awaiting human signature on browser extension)
+
+### P3-F - Pre-Sign Write & Multi-Wallet Support
+- GenVM Lint: PASS (checksum unchanged)
+- Direct tests: PASS (23 passed)
+- Frontend build & lint: PASS (0 errors)
+- Visual QA: PASS (EIP-6963 multi-wallet selector supported visually)
+- Real Write Transaction: BLOCKED/DEFERRED (Awaiting Human E2E Test)
+
+### P3-C (Network Promotion Validation)
+- Verified Studionet real P3 write transaction `0x3b359bc5bda475acd79da158212b094cd968454a0d8d974d4d9a144a65b6b23f`.
+- Confirmed `SUCCESS` and `FINALIZED` lifecycle state.
+- Extracted and recorded exact warrant ID `warrant-cb5653e5-76f4-4dcd-9ae4-d22f81786fea`.
+- Documented Agent Tank requirements (None Explicitly Mandatory) and Studio-dev migration path.
+- Established `docs/NETWORK_PROMOTION_PLAN.md` and per-network deployment tracking.
+P6 - Live Same-Evidence Differential - Passed (Studionet)

@@ -1,120 +1,479 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useWallet } from "@/lib/genlayer/useWallet";
+import { transactionTracker, NormalizedLifecycleState } from "@/lib/genlayer/transaction-lifecycle";
+import { checkWarrantStatus } from "@/lib/genlayer/warrant-reader";
 
 export default function CreateWarrant() {
-  const router = useRouter();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { 
+    address, 
+    isConnecting, 
+    error: walletError, 
+    network, 
+    providers,
+    hasLegacyEthereum,
+    connectToProvider, 
+    writeWarrant 
+  } = useWallet();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    // Simulate transaction delay
-    setTimeout(() => {
-      router.push("/warrant/pending-demo");
-    }, 1500);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const [risk, setRisk] = useState('LOW');
+  const [url, setUrl] = useState('https://raw.githubusercontent.com/npm/cli/328f63c72dd3d72d7cdc0ded638cd9c6a41e2f31/LICENSE');
+  const [expectedHash, setExpectedHash] = useState('d31880ae9181571d18323e1817597e4dcc2d5fb312920a662d1696bb9d7ae0ac');
+  const [action, setAction] = useState('Use this evidence for an internal research summary.');
+  const [reqs, setReqs] = useState('');
+
+  const prefillHighRisk = () => {
+    setUrl('https://raw.githubusercontent.com/npm/cli/328f63c72dd3d72d7cdc0ded638cd9c6a41e2f31/LICENSE');
+    setExpectedHash('d31880ae9181571d18323e1817597e4dcc2d5fb312920a662d1696bb9d7ae0ac');
+    setAction('Use this evidence to authorize an autonomous treasury allocation of significant value.');
+    setRisk('HIGH');
+    setReqs('');
+    invalidateEstimate();
+  };
+  
+  const [txHash, setTxHash] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [showWalletSelector, setShowWalletSelector] = useState(false);
+  const [generatedWarrantId] = useState(() => `warrant-${typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now()}`);
+
+  const [lifecycleState, setLifecycleState] = useState<NormalizedLifecycleState>('IDLE');
+  const [rawStatus, setRawStatus] = useState<string | null>(null);
+  const [rawExecutionResult, setRawExecutionResult] = useState<string | null>(null);
+  const [warrantStatus, setWarrantStatus] = useState<string | null>(null);
+
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
+  const maxPolls = 60; // 5 mins at 5s intervals
+  const pollCount = useRef(0);
+
+  const stopTracking = useCallback(() => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+  }, []);
+
+  const startTracking = useCallback((hash: string, wId: string) => {
+    stopTracking();
+    setLifecycleState('SUBMITTED');
+    pollCount.current = 0;
+
+    pollingRef.current = setInterval(async () => {
+      pollCount.current += 1;
+      if (pollCount.current > maxPolls) {
+        stopTracking();
+        setLifecycleState('NETWORK_ERROR');
+        setSubmitError('Tracking timed out. The transaction may still be finalizing on the network.');
+        return;
+      }
+
+      const info = await transactionTracker.getTransactionStatus(hash);
+      
+      if (info.state === 'NOT_FOUND') {
+        // Just keep waiting for it to appear
+        setLifecycleState('SUBMITTING');
+      } else {
+        setLifecycleState(info.state);
+        setRawStatus(info.rawStatus || null);
+        setRawExecutionResult(info.rawExecutionResult || null);
+        
+        if (info.errorMessage) {
+          setSubmitError(info.errorMessage);
+        } else {
+          setSubmitError(null);
+        }
+
+        if (transactionTracker.isTerminal(info.state)) {
+          stopTracking();
+          localStorage.removeItem('proofdata_pending_tx');
+          localStorage.removeItem('proofdata_pending_warrant_id');
+          
+          if (info.state === 'FINALIZED_SUCCESS') {
+            const wStatus = await checkWarrantStatus(wId);
+            setWarrantStatus(wStatus);
+          }
+        }
+      }
+    }, 5000);
+  }, [stopTracking]);
+
+  useEffect(() => {
+    // Resume tracking on reload
+    const savedTx = localStorage.getItem('proofdata_pending_tx');
+    const savedId = localStorage.getItem('proofdata_pending_warrant_id');
+    
+    // Use an effect to safely restore without causing set-state-in-effect warning issues that disrupt flow
+    let isMounted = true;
+    if (savedTx && savedId && lifecycleState === 'IDLE') {
+       setTimeout(() => {
+         if (isMounted) {
+           setTxHash(savedTx);
+           startTracking(savedTx, savedId);
+         }
+       }, 0);
+    }
+
+    return () => {
+      isMounted = false;
+      stopTracking();
+    };
+  }, [lifecycleState, startTracking, stopTracking]);
+
+  const invalidateEstimate = () => {
+    setSubmitError(null);
   };
 
-  return (
-    <div className="max-w-3xl mx-auto px-6 py-16 w-full">
-      <div className="mb-12">
-        <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">Prepare Reliance Warrant</h1>
-        <p className="text-text-secondary leading-relaxed">
-          Submit evidence and intended action for GenLayer consensus evaluation. 
-          The network will determine if the evidence is sufficient for the declared risk.
-        </p>
-      </div>
+  const handleConnectClick = () => {
+    if (providers.length > 1) {
+      setShowWalletSelector(true);
+    } else if (providers.length === 1) {
+      connectToProvider(providers[0]);
+    } else if (hasLegacyEthereum) {
+      connectToProvider(null);
+    } else {
+      setSubmitError("No compatible browser wallet detected.");
+    }
+  };
 
-      <form onSubmit={handleSubmit} className="space-y-10 border-t border-rules pt-10">
+  const getArgs = () => [
+    generatedWarrantId,
+    url,
+    expectedHash,
+    action,
+    risk,
+    reqs.split('\n').filter(r => r.trim().length > 0),
+    Math.floor(Date.now() / 1000) + 86400 * 7
+  ];
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!address) {
+      handleConnectClick();
+      return;
+    }
+    
+    setIsSubmitting(true);
+    setSubmitError(null);
+    
+    try {
+      const contractAddress = process.env.NEXT_PUBLIC_PROOFDATA_CONTRACT_ADDRESS as `0x${string}`;
+      setLifecycleState('SUBMITTING');
+      
+      const result = await writeWarrant(contractAddress, getArgs());
+      
+      if (result.error) {
+        setSubmitError(`Unable to prepare this transaction: ${result.error}`);
+        setLifecycleState('IDLE');
+        if (result.rawError) {
+          console.error("Technical details:", result.rawError);
+        }
+      } else if (result.txHash) {
+        setTxHash(result.txHash);
+        localStorage.setItem('proofdata_pending_tx', result.txHash);
+        localStorage.setItem('proofdata_pending_warrant_id', generatedWarrantId);
+        startTracking(result.txHash, generatedWarrantId);
+      }
+    } catch (err: unknown) {
+      setSubmitError("Unable to prepare this transaction.");
+      setLifecycleState('IDLE');
+      console.error("Technical details:", err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const renderLifecycleUI = () => {
+    const isTerminal = transactionTracker.isTerminal(lifecycleState);
+
+    return (
+      <div className="bg-bg-cool-slate border border-rules p-8 md:p-10 mb-8">
+        <h2 className="text-2xl text-white mb-6 font-light border-b border-rules pb-4">
+          RELIANCE REQUEST
+        </h2>
         
-        {/* Evidence Section */}
-        <div className="space-y-6 border-b border-rules pb-10">
-          <h2 className="text-xl font-semibold flex items-center gap-3">
-            <span className="flex items-center justify-center w-6 h-6 bg-text-primary text-background text-xs font-mono">1</span>
-            Evidence Source
-          </h2>
-          <div className="grid gap-2">
-            <label htmlFor="evidenceUrl" className="text-sm font-medium uppercase tracking-wider text-text-secondary">Evidence URL</label>
-            <input 
-              id="evidenceUrl"
-              type="url" 
-              required
-              className="w-full border border-rules bg-surface px-4 py-3 font-mono text-sm focus:outline-none focus:border-text-primary transition-colors placeholder:text-text-secondary/50"
-              placeholder="https://example.com/report.json"
-            />
-            <p className="text-xs text-text-secondary mt-1">Must be publicly accessible for network validation.</p>
+        <div className="space-y-4 font-mono text-sm mb-8">
+          <div className="flex items-center gap-4">
+            <div className={`w-3 h-3 rounded-full ${lifecycleState === 'SUBMITTING' ? 'bg-accent animate-pulse' : 'bg-green-500'}`}></div>
+            <div className={lifecycleState === 'SUBMITTING' ? 'text-white' : 'text-text-secondary'}>Submitted</div>
           </div>
-        </div>
-
-        {/* Action & Risk Section */}
-        <div className="space-y-6 border-b border-rules pb-10">
-          <h2 className="text-xl font-semibold flex items-center gap-3">
-            <span className="flex items-center justify-center w-6 h-6 bg-text-primary text-background text-xs font-mono">2</span>
-            Context & Consequence
-          </h2>
           
-          <div className="grid gap-2">
-            <label htmlFor="action" className="text-sm font-medium uppercase tracking-wider text-text-secondary">Intended Action</label>
-            <textarea 
-              id="action"
-              required
-              rows={3}
-              className="w-full border border-rules bg-surface px-4 py-3 text-sm focus:outline-none focus:border-text-primary transition-colors placeholder:text-text-secondary/50 resize-y"
-              placeholder="e.g. Execute an autonomous trade of 50 WETH based on this intelligence report."
-            />
+          <div className="flex items-center gap-4">
+            <div className={`w-3 h-3 rounded-full ${['SUBMITTING', 'SUBMITTED', 'NOT_FOUND'].includes(lifecycleState) ? 'bg-bg-deep-graphite' : lifecycleState === 'PROCESSING' ? 'bg-accent animate-pulse' : 'bg-green-500'}`}></div>
+            <div className={['SUBMITTING', 'SUBMITTED', 'NOT_FOUND'].includes(lifecycleState) ? 'text-text-secondary/50' : lifecycleState === 'PROCESSING' ? 'text-white' : 'text-text-secondary'}>Processing</div>
           </div>
 
-          <div className="grid gap-4 mt-6">
-            <label className="text-sm font-medium uppercase tracking-wider text-text-secondary">Risk Consequence</label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {['LOW', 'MEDIUM', 'HIGH'].map((risk) => (
-                <label key={risk} className="relative flex cursor-pointer rounded-sm border border-rules bg-surface p-4 shadow-sm focus:outline-none hover:bg-background has-[:checked]:border-text-primaryhas-[:checked]:ring-1 has-[:checked]:ring-text-primary transition-all">
-                  <input type="radio" name="riskLevel" value={risk} className="sr-only" defaultChecked={risk === 'MEDIUM'} />
-                  <span className="flex flex-col">
-                    <span className="block text-sm font-semibold">{risk}</span>
-                  </span>
-                </label>
-              ))}
+          <div className="flex items-center gap-4">
+            <div className={`w-3 h-3 rounded-full ${!['DECIDED', 'FINALIZED_SUCCESS', 'FINALIZED_ERROR'].includes(lifecycleState) ? 'bg-bg-deep-graphite' : lifecycleState === 'DECIDED' ? 'bg-accent animate-pulse' : 'bg-green-500'}`}></div>
+            <div className={!['DECIDED', 'FINALIZED_SUCCESS', 'FINALIZED_ERROR'].includes(lifecycleState) ? 'text-text-secondary/50' : lifecycleState === 'DECIDED' ? 'text-white' : 'text-text-secondary'}>Decision Reached</div>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <div className={`w-3 h-3 rounded-full ${!isTerminal ? 'bg-bg-deep-graphite' : lifecycleState === 'FINALIZED_SUCCESS' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+            <div className={!isTerminal ? 'text-text-secondary/50' : 'text-white'}>
+              {lifecycleState === 'FINALIZED_SUCCESS' ? 'Finalized - Execution Verified' : 
+               lifecycleState === 'FINALIZED_ERROR' ? 'Finalized - Execution Failed' : 
+               lifecycleState === 'FAILED' ? 'Transaction Failed/Canceled' :
+               lifecycleState === 'NETWORK_ERROR' ? 'Network Tracking Error' :
+               'Finalized'}
             </div>
           </div>
         </div>
 
-        {/* Requirements */}
-        <div className="space-y-6 border-b border-rules pb-10">
-          <h2 className="text-xl font-semibold flex items-center gap-3">
-            <span className="flex items-center justify-center w-6 h-6 bg-text-primary text-background text-xs font-mono">3</span>
-            Validation Requirements
-          </h2>
-          <div className="grid gap-2">
-            <label htmlFor="requirements" className="text-sm font-medium uppercase tracking-wider text-text-secondary">Specific Criteria (Optional)</label>
-            <textarea 
-              id="requirements"
-              rows={2}
-              className="w-full border border-rules bg-surface px-4 py-3 text-sm focus:outline-none focus:border-text-primary transition-colors placeholder:text-text-secondary/50 resize-y"
-              placeholder="e.g. Must be published within the last 24 hours. Must mention NVDA."
-            />
+        <div className="bg-bg-deep-graphite p-5 border border-rules text-xs font-mono text-text-secondary space-y-2">
+          <div className="break-all"><span className="text-white">Transaction Hash:</span> {txHash}</div>
+          <div><span className="text-white">Protocol Status:</span> {rawStatus || 'WAITING'}</div>
+          <div><span className="text-white">Execution Result:</span> {rawExecutionResult || 'WAITING'}</div>
+        </div>
+
+        {submitError && (
+          <div className="mt-6 p-4 border border-[#800010]/20 bg-[#FEE7EA] text-[#800010] text-sm font-mono">
+            {submitError}
+            {!isTerminal && (
+               <button onClick={() => startTracking(txHash!, localStorage.getItem('proofdata_pending_warrant_id')!)} className="block mt-2 underline">Retry Status Check</button>
+            )}
+          </div>
+        )}
+
+        {warrantStatus && (
+          <div className="mt-8 p-6 bg-surface-ivory text-text-dark border border-rules-light">
+            <div className="text-[10px] uppercase tracking-widest text-text-dark-secondary mb-2">Semantic Verdict</div>
+            <div className="text-lg font-medium">{warrantStatus}</div>
+            <div className="text-xs text-text-dark-secondary mt-2">The semantic adjudication phase is currently evaluating the evidence. Additional read/adjudication integration will be required in later milestones to display full verdict rationale.</div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="flex-1 flex flex-col relative w-full items-center bg-bg-dark-slate font-sans">
+      <div className="absolute inset-0 z-0 opacity-40 reliance-field pointer-events-none"></div>
+      
+      <div className="max-w-4xl px-6 py-20 w-full relative z-10">
+        
+        {/* Wallet Bar */}
+        <div className="mb-8 flex justify-between items-center bg-bg-cool-slate border border-rules p-4">
+          <div className="text-xs font-mono text-text-secondary">
+            {network ? `NETWORK: ${network}` : 'NOT CONNECTED'}
+          </div>
+          <div>
+            {!address ? (
+              <div className="relative">
+                <button 
+                  type="button" 
+                  onClick={handleConnectClick} 
+                  disabled={isConnecting}
+                  className="text-xs font-mono uppercase bg-text-dark text-white px-4 py-2 hover:bg-black transition-colors"
+                >
+                  {isConnecting ? 'CONNECTING...' : 'CONNECT WALLET'}
+                </button>
+                {showWalletSelector && (
+                  <div className="absolute right-0 top-full mt-2 w-64 bg-bg-deep-graphite border border-rules shadow-2xl z-50">
+                    <div className="p-3 border-b border-rules text-xs font-mono text-text-secondary uppercase">Select Wallet</div>
+                    {providers.map(p => (
+                      <button 
+                        key={p.info.uuid}
+                        onClick={() => {
+                          setShowWalletSelector(false);
+                          connectToProvider(p);
+                        }}
+                        className="w-full text-left px-4 py-3 text-sm text-white hover:bg-bg-cool-slate flex items-center gap-3 transition-colors"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={p.info.icon} alt={p.info.name} className="w-5 h-5" />
+                        {p.info.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-xs font-mono text-white bg-bg-deep-graphite px-4 py-2 border border-rules-light/10">
+                {address.substring(0, 6)}...{address.substring(address.length - 4)}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Submit */}
-        <div className="pt-4 flex items-center justify-end">
-          <button 
-            type="submit" 
-            disabled={isSubmitting}
-            className="px-8 py-4 bg-text-primary text-background font-semibold tracking-wide hover:opacity-90 transition-opacity disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            {isSubmitting ? (
-              <>
-                <span className="animate-spin inline-block w-4 h-4 border-2 border-background/30 border-t-background rounded-full"></span>
-                <span>Awaiting Consensus...</span>
-              </>
-            ) : (
-              "Submit for Adjudication"
-            )}
-          </button>
+        {walletError && (
+          <div className="mb-8 p-4 border border-[#800010]/20 bg-[#FEE7EA] text-[#800010] text-sm font-mono">
+            {walletError}
+          </div>
+        )}
+
+        <div className="mb-12 border-b border-rules pb-12 flex flex-col md:flex-row md:justify-between md:items-end gap-6">
+          <div>
+            <div className="text-[10px] uppercase tracking-[0.2em] text-text-secondary font-mono mb-4 flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-accent"></div>
+              Warrant Initialization
+            </div>
+            <h1 className="text-4xl md:text-5xl font-light tracking-tight text-white mb-4">Reliance Dossier</h1>
+            <p className="text-text-secondary leading-relaxed font-light max-w-xl">
+              Assemble the evidence and decision context. The GenLayer network will determine if the exact evidence is sufficient to authorize your intended action.
+            </p>
+          </div>
+          <div className="text-right">
+            <div className="text-[10px] uppercase tracking-wider text-text-secondary font-mono mb-1">Status</div>
+            <div className="text-sm font-mono text-white bg-bg-midnight-navy px-3 py-1 border border-rules inline-block uppercase">
+              {txHash ? lifecycleState.replace('_', ' ') : 'DRAFTING'}
+            </div>
+          </div>
         </div>
-      </form>
+
+        {txHash ? renderLifecycleUI() : (
+          <form onSubmit={handleSubmit} className="space-y-8">
+            
+            <div className="flex justify-end mb-4">
+              <button 
+                type="button" 
+                onClick={prefillHighRisk}
+                className="text-xs font-mono tracking-widest text-[#2B5CFF] hover:text-white border border-[#2B5CFF] hover:bg-[#2B5CFF] px-4 py-2 transition-colors"
+              >
+                AUTO-FILL P6 HIGH-RISK TEST
+              </button>
+            </div>
+
+            {submitError && (
+              <div className="p-4 border border-[#800010]/20 bg-[#FEE7EA] text-[#800010] text-sm font-mono">
+                {submitError}
+              </div>
+            )}
+
+            <div className="bg-bg-cool-slate border border-rules relative">
+              <div className="absolute -left-3 top-6 w-6 h-6 bg-accent text-white flex items-center justify-center text-xs font-mono rounded-sm shadow-[0_0_10px_rgba(43,92,255,0.4)]">1</div>
+              <div className="p-8 md:p-10">
+                <h2 className="text-xl font-medium text-white mb-8 border-b border-rules pb-4 flex justify-between items-end">
+                  <span>Evidence Source</span>
+                  <span className="text-[10px] font-mono text-text-secondary font-normal tracking-widest uppercase">Target Identity</span>
+                </h2>
+                
+                <div className="grid gap-6">
+                  <div>
+                    <label htmlFor="evidenceUrl" className="text-xs font-mono uppercase tracking-widest text-text-secondary block mb-3">Resource URI</label>
+                    <input 
+                      id="evidenceUrl"
+                      type="url" 
+                      required
+                      value={url}
+                      onChange={(e) => {
+                        setUrl(e.target.value);
+                        invalidateEstimate();
+                      }}
+                      className="w-full bg-bg-deep-graphite border border-rules px-5 py-4 font-mono text-sm text-white focus:outline-none focus:border-accent transition-colors placeholder:text-text-secondary/30"
+                      placeholder="https://example.com/api/data"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="expectedHash" className="text-xs font-mono uppercase tracking-widest text-text-secondary block mb-3">Expected Keccak256 Hash</label>
+                    <input 
+                      id="expectedHash"
+                      type="text" 
+                      required
+                      value={expectedHash}
+                      onChange={(e) => {
+                        setExpectedHash(e.target.value);
+                        invalidateEstimate();
+                      }}
+                      className="w-full bg-bg-deep-graphite border border-rules px-5 py-4 font-mono text-sm text-white focus:outline-none focus:border-accent transition-colors placeholder:text-text-secondary/30"
+                      placeholder="d31880ae9181571d18323e1817597e4dcc2d5fb312920a662d1696bb9d7ae0ac"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-surface-ivory text-text-dark border border-rules-light relative shadow-xl">
+              <div className="absolute -left-3 top-6 w-6 h-6 bg-text-dark text-white flex items-center justify-center text-xs font-mono rounded-sm">2</div>
+              <div className="p-8 md:p-10">
+                <h2 className="text-xl font-medium text-text-dark mb-8 border-b border-rules-light pb-4 flex justify-between items-end">
+                  <span>Decision Context</span>
+                  <span className="text-[10px] font-mono text-text-dark-secondary font-normal tracking-widest uppercase">Intended Action</span>
+                </h2>
+                
+                <div className="grid gap-8">
+                  <div>
+                    <label htmlFor="action" className="text-xs font-mono uppercase tracking-widest text-text-dark-secondary block mb-3">Proposed Action</label>
+                    <textarea 
+                      id="action"
+                      required
+                      value={action}
+                      onChange={(e) => {
+                        setAction(e.target.value);
+                        invalidateEstimate();
+                      }}
+                      rows={3}
+                      className="w-full bg-surface-pale-gray border border-rules-light px-5 py-4 text-sm text-text-dark focus:outline-none focus:border-text-dark transition-colors placeholder:text-text-dark-secondary/50 resize-y"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-mono uppercase tracking-widest text-text-dark-secondary block mb-3">Consequence Severity</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {[
+                        { id: 'LOW', label: 'Low', desc: 'Reversible, informational' },
+                        { id: 'MEDIUM', label: 'Medium', desc: 'Moderate financial risk' },
+                        { id: 'HIGH', label: 'High', desc: 'Irreversible, high value' }
+                      ].map((level) => (
+                        <button
+                          key={level.id}
+                          type="button"
+                          onClick={() => {
+                            setRisk(level.id);
+                            invalidateEstimate();
+                          }}
+                          className={`text-left p-4 border transition-all ${
+                            risk === level.id 
+                              ? 'border-text-dark bg-white shadow-[inset_2px_0_0_0_#0A0E17]' 
+                              : 'border-rules-light bg-surface-pale-gray hover:border-text-dark-secondary text-text-dark-secondary'
+                          }`}
+                        >
+                          <span className={`font-mono tracking-wider text-xs font-semibold block mb-2 ${risk === level.id ? 'text-text-dark' : ''}`}>{level.id}</span>
+                          <span className="text-xs">{level.desc}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-bg-midnight-navy border border-rules relative">
+              <div className="absolute -left-3 top-6 w-6 h-6 bg-bg-deep-graphite border border-rules text-text-secondary flex items-center justify-center text-xs font-mono rounded-sm">3</div>
+              <div className="p-8 md:p-10">
+                <h2 className="text-xl font-medium text-text-primary mb-6 border-b border-rules pb-4 flex justify-between items-end">
+                  <span>Validation Bounds</span>
+                  <span className="text-[10px] font-mono text-text-secondary font-normal tracking-widest uppercase">Optional</span>
+                </h2>
+                <div className="grid gap-3">
+                  <label htmlFor="requirements" className="text-xs font-mono uppercase tracking-widest text-text-secondary mb-1 block">Specific Criteria</label>
+                  <textarea 
+                    id="requirements"
+                    value={reqs}
+                    onChange={(e) => {
+                      setReqs(e.target.value);
+                      invalidateEstimate();
+                    }}
+                    rows={2}
+                    className="w-full bg-bg-deep-graphite/50 border border-rules px-5 py-3 text-sm text-white focus:outline-none focus:border-text-secondary transition-colors placeholder:text-text-secondary/30 resize-y"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-8 flex justify-end gap-4">
+              <button 
+                type="submit" 
+                disabled={isSubmitting || !url || !action}
+                className="group relative px-12 py-5 bg-accent text-white font-mono tracking-widest uppercase text-sm transition-all hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed border border-accent"
+              >
+                {isSubmitting ? 'PREPARING...' : 'ISSUE RELIANCE WARRANT'}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
     </div>
   );
 }

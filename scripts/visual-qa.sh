@@ -10,8 +10,8 @@ MILESTONE=$1
 OUTDIR="docs/visual-reviews/$MILESTONE"
 mkdir -p "$OUTDIR"
 
-ROUTES=("/" "/create" "/warrant/demo" "/compare")
-NAMES=("home" "create" "warrant" "compare")
+ROUTES=("/" "/create" "/warrant/warrant-cb5653e5-76f4-4dcd-9ae4-d22f81786fea" "/warrant/warrant-c955c636-7f66-4350-89b9-932f4ecd1451" "/compare")
+NAMES=("home" "create" "warrant-low" "warrant-high" "compare")
 
 # Create a skeleton VISUAL_REVIEW.md
 REVIEW_FILE="$OUTDIR/VISUAL_REVIEW.md"
@@ -29,7 +29,7 @@ for i in "${!ROUTES[@]}"; do
 
   # --- DESKTOP ---
   echo "-> Desktop (1440x1000)"
-  npx playwright-cli open "$URL" --browser=chrome
+  npx playwright-cli open "$URL"
   npx playwright-cli resize 1440 1000
   npx playwright-cli screenshot --filename="$OUTDIR/$NAME-desktop.png"
   npx playwright-cli snapshot --filename="$OUTDIR/$NAME-desktop-snapshot.yml"
@@ -40,7 +40,7 @@ for i in "${!ROUTES[@]}"; do
   # --- MOBILE ---
   echo "-> Mobile (390x844)"
   # We use generic mobile emulation if we can, or just resize
-  npx playwright-cli open "$URL" --mobile --browser=chrome
+  npx playwright-cli open "$URL" --mobile
   npx playwright-cli resize 390 844
   npx playwright-cli screenshot --filename="$OUTDIR/$NAME-mobile.png"
   npx playwright-cli snapshot --filename="$OUTDIR/$NAME-mobile-snapshot.yml"
