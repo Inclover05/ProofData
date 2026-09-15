@@ -1,5 +1,4 @@
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
-
 from dataclasses import dataclass
 from typing import List, Dict
 from genlayer import *
@@ -65,9 +64,6 @@ class ProofDataRelianceLayer(gl.Contract):
 
     @gl.public.write
     def retrieve_and_validate(self, warrant_id: str, current_time: int) -> None:
-        # NOTE: `current_time` is retained for LEGACY COMPATIBILITY INPUT.
-        # It is strictly untrusted. Expiry logic now relies on deterministic `transaction_time`.
-        
         if warrant_id not in self.warrants:
             raise gl.vm.UserError("Warrant not found")
         
@@ -80,113 +76,35 @@ class ProofDataRelianceLayer(gl.Contract):
             warrant.status = "NOT_WARRANTED"
             return
             
-        import time
-        transaction_time = int(time.time())
-        if transaction_time >= warrant.expires_at:
+        if current_time >= warrant.expires_at:
             warrant.status = "NOT_WARRANTED"
             return
-            
-        evidence_ref = warrant.evidence_ref
 
-        def leader_fn() -> dict:
+        def leader_fn() -> str:
             try:
-                response = gl.nondet.web.get(evidence_ref)
-                
-                if isinstance(response, str):
-                    body_bytes = response.encode("utf-8")
+                payload_raw = gl.nondet.web.get(warrant.evidence_ref)
+                if isinstance(payload_raw, str):
+                    return payload_raw
                 else:
-                    body = response.body
-                    if isinstance(body, bytes):
-                        body_bytes = body
-                    elif isinstance(body, str):
-                        body_bytes = body.encode("utf-8")
-                    else:
-                        return {
-                            "fetch_status": "UNAVAILABLE",
-                            "hash": "",
-                        }
-                        
-                evidence_hash = genlayer.Keccak256(body_bytes).hexdigest()
-                
-                return {
-                    "fetch_status": "FETCHED",
-                    "hash": evidence_hash,
-                }
+                    body = payload_raw.body
+                    return body.decode("utf-8") if isinstance(body, bytes) else str(body)
             except Exception:
-                return {
-                    "fetch_status": "UNAVAILABLE",
-                    "hash": "",
-                }
+                return ""
 
         def validator_fn(leader_result) -> bool:
             if not isinstance(leader_result, gl.vm.Return):
                 return False
-
-            try:
-                leader_data = dict(leader_result.calldata)
-            except Exception:
-                return False
-
-            leader_status = leader_data.get("fetch_status")
-            leader_hash = leader_data.get("hash")
-
-            if leader_status not in ("FETCHED", "UNAVAILABLE"):
-                return False
-
-            if not isinstance(leader_hash, str):
-                return False
-
-            if leader_status == "FETCHED":
-                if len(leader_hash) != 64:
-                    return False
-            else:
-                if leader_hash != "":
-                    return False
-
-            try:
-                my_response = gl.nondet.web.get(evidence_ref)
-                
-                if isinstance(my_response, str):
-                    my_body_bytes = my_response.encode("utf-8")
-                else:
-                    my_body = my_response.body
-                    if isinstance(my_body, bytes):
-                        my_body_bytes = my_body
-                    elif isinstance(my_body, str):
-                        my_body_bytes = my_body.encode("utf-8")
-                    else:
-                        my_status, my_hash = "UNAVAILABLE", ""
-                        my_body_bytes = None
-                        
-                if my_body_bytes is not None:
-                    my_hash = genlayer.Keccak256(my_body_bytes).hexdigest()
-                    my_status = "FETCHED"
-            except Exception:
-                my_status, my_hash = "UNAVAILABLE", ""
-
-            return (
-                leader_status == my_status
-                and leader_hash == my_hash
-            )
+            my_result = leader_fn()
+            return genlayer.Keccak256(leader_result.calldata.encode()).hexdigest() == genlayer.Keccak256(my_result.encode()).hexdigest()
 
         result = gl.vm.run_nondet_unsafe(leader_fn, validator_fn)
         
-        try:
-            result_data = dict(result)
-        except Exception:
-            warrant.status = "INCONCLUSIVE"
-            return
-
-        if result_data.get("fetch_status") != "FETCHED":
+        if not result:
             warrant.status = "INCONCLUSIVE"
             return
             
-        actual_hash = result_data.get("hash")
+        actual_hash = genlayer.Keccak256(result.encode()).hexdigest()
         
-        if not isinstance(actual_hash, str) or len(actual_hash) != 64:
-            warrant.status = "INCONCLUSIVE"
-            return
-            
         if actual_hash != warrant.expected_hash:
             warrant.status = "NOT_WARRANTED"
             return
