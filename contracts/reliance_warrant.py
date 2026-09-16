@@ -198,10 +198,13 @@ class ProofDataRelianceLayer(gl.Contract):
         if warrant_id not in self.warrants:
             raise gl.vm.UserError("Warrant not found")
             
-        warrant = self.warrants[warrant_id]
+        storage_warrant = self.warrants[warrant_id]
         
-        if warrant.status != "PENDING_AI":
+        if storage_warrant.status != "PENDING_AI":
             raise gl.vm.UserError("Warrant not in PENDING_AI state")
+
+        # Nondeterministic execution may only read the in-memory snapshot.
+        warrant = gl.storage.copy_to_memory(storage_warrant)
 
         def leader_fn() -> dict:
             try:
@@ -253,7 +256,7 @@ Return valid JSON exactly in this format:
             return False
 
         result = gl.vm.run_nondet_unsafe(leader_fn, validator_fn)
-        warrant.status = dict(result).get("status", "INCONCLUSIVE")
+        storage_warrant.status = dict(result).get("status", "INCONCLUSIVE")
 
     @gl.public.view
     def get_warrant(self, warrant_id: str) -> RelianceWarrantDTO:
