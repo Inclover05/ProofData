@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "network": "Bradbury Testnet",
+  "chainId": 4221,
+  "contractAddress": "0xa73c0183e2e3605bbd5013abcb9c5683f7db1b4a",
+  "sourceSha256": "c03894f85ea4afd13a2fe536274589b666e952ef40980a6cfae949bc9fc0dd1d",
+  "classification": "PASS",
+  "evidence": {
+    "url": "https://unpkg.com/genlayer-js@1.1.8/dist/index-BCPb0x30.d.ts",
+    "lengthBytes": 723,
+    "keccak": "b4c91843ee2e1a3043bb3b49a431c513356331023042861a525308e449210525",
+    "package": "genlayer-js@1.1.8",
+    "artifact": "dist/index-BCPb0x30.d.ts"
+  },
+  "sharedRequirements": [],
+  "lowWarrantId": "storage-fix-low-diag-001",
+  "highWarrantId": "thesis2-high-001",
+  "integrityChecks": {
+    "contract": true,
+    "url": true,
+    "expectedHash": true,
+    "validatorFetchedHash": true,
+    "lockedRawBytes": true,
+    "requirements": true,
+    "implementation": true,
+    "expiry": true
+  },
+  "meaningfulRelianceChanges": [
+    "purpose",
+    "risk_level"
+  ],
+  "identifierDifference": "fresh HIGH warrant ID; existing LOW ID preserved",
+  "lowVerdict": "WARRANTED",
+  "highVerdict": "NOT_WARRANTED",
+  "noResultShopping": true,
+  "originalP7ArtifactSha256": "73aa4b538999ae258625056a1ded2ec8114c2bd3c8b296cd9700c2cd87706cb0",
+  "sourceEvidence": "scratch/bradbury_canary/p7-final-thesis-v2-20260916/p7-final-thesis.json"
+}

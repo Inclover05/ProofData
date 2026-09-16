@@ -4,3 +4,10 @@ __pycache__/
 # Playwright CLI output (may contain credentials)
 .playwright-cli/
 .env
+# Keep local credentials and generated environments out of submission commits.
+.env.*
+node_modules/
+.venv-v06/
+.venv-v06-rc1/
+.playwright/
+docs/visual-reviews/

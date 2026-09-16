@@ -1,3 +1,6 @@
+> **Historical record — superseded 2026-09-16.** Earlier matrix. Browser NOT RUN and differential NOT READY entries are historical; current measured coverage is in submission-proof/verification.json. Untested branches are not promoted to PASS.
+> Final canonical contract: `0xa73c0183e2e3605bbd5013abcb9c5683f7db1b4a`, Bradbury chain 4221. See the [current README](../README.md) and [final proof](submission-proof/README.md). Original content is preserved below.
+
 # ProofData Cross-Layer Test Matrix
 
 | Layer | Environment | Evidence Endpoint | Warrant ID | Execution | Consensus | Evidence Result |

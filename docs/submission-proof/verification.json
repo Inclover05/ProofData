@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-09-16T18:37:36.650667+00:00",
+  "classification": "PASS",
+  "contractAddress": "0xa73c0183e2e3605bbd5013abcb9c5683f7db1b4a",
+  "chainId": 4221,
+  "frontendCheckpoint": "9c2901cd2dcc37a9b9d06abbf57354de22755484",
+  "checks": {
+    "lint": {
+      "command": "npm run lint",
+      "status": "PASS",
+      "rerunForSubmission": true
+    },
+    "typecheck": {
+      "command": "npm run typecheck",
+      "status": "PASS",
+      "rerunForSubmission": true
+    },
+    "productionBuild": {
+      "command": "npm run build",
+      "implementation": "Next.js 16.3.5 supported Webpack",
+      "status": "PASS",
+      "rerunForSubmission": true
+    },
+    "frontendTests": {
+      "command": "npm test",
+      "status": "PASS",
+      "passed": 12,
+      "failed": 0,
+      "rerunForSubmission": true
+    },
+    "browserAcceptance": {
+      "command": "playwright-cli -s=proofdata-bradbury run-code --filename=scripts/submission/browser-readonly.js --raw",
+      "status": "PASS",
+      "passed": 17,
+      "failed": 0,
+      "productionOrigin": "http://localhost:3036",
+      "source": "verification-browser.json",
+      "kind": "Fresh-context read-only production acceptance; no lifecycle writes"
+    },
+    "publicOnChainVerification": {
+      "command": "node scripts/submission/verify-final-proof.cjs",
+      "status": "PASS",
+      "existingWritesVerified": 10,
+      "newTransactionsSubmitted": 0,
+      "source": "verification-live.json"
+    },
+    "liveMetaMaskE2E": {
+      "status": "PASS",
+      "kind": "Preserved real user-authorized MetaMask writes through selected EIP-6963 provider",
+      "source": "browser-e2e.json",
+      "lifecycle": [
+        "PENDING",
+        "PENDING_AI",
+        "WARRANTED"
+      ],
+      "allThreeGenLayerWritesFinalized": true,
+      "coldReloadWithoutSignerTracker": "PASS",
+      "rerunForSubmission": false
+    },
+    "walletFailureArchitecture": {
+      "status": "PASS",
+      "passed": 8,
+      "kind": "Earlier simulated provider acceptance, not real signed transactions"
+    },
+    "receiptFailureUi": {
+      "status": "PASS",
+      "passed": 8,
+      "kind": "Earlier mocked receipt/state acceptance, not live chain failure injection"
+    },
+    "pythonBradburyContractRegression": {
+      "status": "NOT RUN — BLOCKED_TOOLING historically",
+      "reason": "Historical Python gltest/runner constraints preserved; no contract-source change or tooling-family migration in packaging mission"
+    }
+  },
+  "integrity": {
+    "sourceSha256": "c03894f85ea4afd13a2fe536274589b666e952ef40980a6cfae949bc9fc0dd1d",
+    "deployedCodeMatchesSource": true,
+    "fixtureLengthBytes": 723,
+    "fixtureKeccak": "b4c91843ee2e1a3043bb3b49a431c513356331023042861a525308e449210525",
+    "originalP7ArtifactSha256": "73aa4b538999ae258625056a1ded2ec8114c2bd3c8b296cd9700c2cd87706cb0",
+    "thesisLowHighRerun": false,
+    "contractRedeployed": false,
+    "frontendSemanticVerdictGenerated": false
+  },
+  "bundleSealing": "RPC snapshot was captured before manifest creation; manifest checksums were subsequently verified locally. Future public verifier runs also verify the manifest.",
+  "currentAdvancedLifecycleRpc": "gen_getTransactionLifecycle unavailable (-32601) on observed node; actual finalized status/full receipts prove completion without resolutionAction",
+  "nonBlockingToolingAttempt": "Initial browser harness used a URL global unavailable in CLI runner; fixed by evaluating location.origin in the page. Failure preserved locally; product code unchanged.",
+  "sourceLogs": "scratch/bradbury_canary/submission-package-20260916/static-check-results.json",
+  "remainingSubmissionBlockingEngineeringIssues": []
+}

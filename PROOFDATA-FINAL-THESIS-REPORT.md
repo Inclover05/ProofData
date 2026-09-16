@@ -1,3 +1,6 @@
+> **Historical record — superseded 2026-09-16.** Pre-fix attempt. Its claimed LLM explanation is unsupported: finalized INCONCLUSIVE did not prove semantic reasoning. The final V2 LOW/HIGH proof supersedes this report.
+> Final canonical contract: `0xa73c0183e2e3605bbd5013abcb9c5683f7db1b4a`, Bradbury chain 4221. See the [current README](README.md) and [final proof](docs/submission-proof/README.md). Original content is preserved below.
+
 # ProofData Final Thesis Report — Bradbury
 
 ## 1. Expiry Hardening

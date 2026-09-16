@@ -1,3 +1,6 @@
+> **Historical record — superseded 2026-09-16.** Pre-fix risk snapshot. Differential proof and frontend migration/E2E blockers listed below have been resolved.
+> Final canonical contract: `0xa73c0183e2e3605bbd5013abcb9c5683f7db1b4a`, Bradbury chain 4221. See the [current README](../README.md) and [final proof](submission-proof/README.md). Original content is preserved below.
+
 # ProofData Final Risk Register
 
 | Risk | Description | Severity | Impact |

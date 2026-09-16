@@ -1,3 +1,6 @@
+> **Historical record — superseded 2026-09-16.** Historical RC tooling blocker; final submission uses the existing Bradbury deployment and stable browser SDK.
+> Final canonical contract: `0xa73c0183e2e3605bbd5013abcb9c5683f7db1b4a`, Bradbury chain 4221. See the [current README](../README.md) and [final proof](submission-proof/README.md). Original content is preserved below.
+
 # P7 RC Blocker: Direct Mode calldata decoding error
 
 **Environment:**

@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "network": "Bradbury Testnet",
+  "chainId": 4221,
+  "contractAddress": "0xa73c0183e2e3605bbd5013abcb9c5683f7db1b4a",
+  "sourceSha256": "c03894f85ea4afd13a2fe536274589b666e952ef40980a6cfae949bc9fc0dd1d",
+  "observedAt": "2026-09-16T10:50:47.668Z",
+  "classification": "PASS",
+  "evidence": {
+    "url": "https://unpkg.com/genlayer-js@1.1.8/dist/index-BCPb0x30.d.ts",
+    "lengthBytes": 723,
+    "keccak": "b4c91843ee2e1a3043bb3b49a431c513356331023042861a525308e449210525",
+    "package": "genlayer-js@1.1.8",
+    "artifact": "dist/index-BCPb0x30.d.ts"
+  },
+  "warrant": {
+    "evidence_ref": "https://unpkg.com/genlayer-js@1.1.8/dist/index-BCPb0x30.d.ts",
+    "expected_hash": "b4c91843ee2e1a3043bb3b49a431c513356331023042861a525308e449210525",
+    "expires_at": 1893456000,
+    "id": "storage-fix-low-diag-001",
+    "purpose": "Use this evidence to prepare an internal technical note stating that GenLayerJS supports Bradbury as a testnet network for dApp clients.",
+    "requester": "0x0c3bf46112f0Ea56ecFA4AD186ef0fBB869F2577",
+    "requirements": [],
+    "risk_level": "LOW",
+    "status": "WARRANTED"
+  },
+  "semanticOutput": {
+    "reason": "The provided code evidence explicitly declares and exports a 'testnetBradbury' constant of type 'GenLayerChain'. This directly satisfies the low-risk purpose of preparing an internal technical note stating that GenLayerJS supports Bradbury as a testnet network for dApp clients. No further validation is required at this risk level.",
+    "status": "WARRANTED"
+  },
+  "semanticReasonSource": "GenLayer nondeterministic consensus execution output; not persisted in get_warrant",
+  "llmReached": true,
+  "transactions": [
+    {
+      "stage": "create",
+      "outerEvmTransaction": "0xe82f24cb369017f577cfd6fcac6e274a3bc9fc6eeff259476e634907cbcc8f3e",
+      "outerReceiptStatus": "0x1",
+      "genLayerTransaction": "0xf298ba75200a82297a5148f36f901d3a019d5939629db0a0bcb8503691e278e6",
+      "status": "FINALIZED",
+      "consensus": "AGREE",
+      "execution": "FINISHED_WITH_RETURN",
+      "validatorRounds": [
+        {
+          "round": 0,
+          "leaderIndex": 2,
+          "result": "AGREE",
+          "votes": [
+            "AGREE",
+            "AGREE",
+            "AGREE",
+            "AGREE",
+            "AGREE"
+          ]
+        }
+      ]
+    },
+    {
+      "stage": "validation",
+      "outerEvmTransaction": "0xd3c0ec15ff391e7582f8ade49327e981dc544f349b518eb512a591516964f573",
+      "outerReceiptStatus": "0x1",
+      "genLayerTransaction": "0xe13cfe72420123b175236e0c50e82b927b02971d09409b53165c0f9d0ad66d81",
+      "status": "FINALIZED",
+      "consensus": "AGREE",
+      "execution": "FINISHED_WITH_RETURN",
+      "validatorRounds": [
+        {
+          "round": 0,
+          "leaderIndex": 3,
+          "result": "AGREE",
+          "votes": [
+            "AGREE",
+            "AGREE",
+            "AGREE",
+            "AGREE",
+            "AGREE"
+          ]
+        }
+      ]
+    },
+    {
+      "stage": "adjudication",
+      "outerEvmTransaction": "0x31056320b0119b00c08baa2d6dcc02f3b24538376087cfa99459a0d2c4e246cc",
+      "outerReceiptStatus": "0x1",
+      "genLayerTransaction": "0x4c4ecc96b793b180e005939aee7f3e2a5596dc1d9abaa5ca98d6add951d4a067",
+      "status": "FINALIZED",
+      "consensus": "AGREE",
+      "execution": "FINISHED_WITH_RETURN",
+      "validatorRounds": [
+        {
+          "round": 0,
+          "leaderIndex": 0,
+          "result": "IDLE",
+          "votes": [
+            "NOT_VOTED",
+            "NOT_VOTED",
+            "NOT_VOTED",
+            "NOT_VOTED",
+            "NOT_VOTED"
+          ]
+        },
+        {
+          "round": 0,
+          "leaderIndex": 0,
+          "result": "IDLE",
+          "votes": []
+        },
+        {
+          "round": 0,
+          "leaderIndex": 1,
+          "result": "AGREE",
+          "votes": [
+            "TIMEOUT",
+            "AGREE",
+            "AGREE",
+            "TIMEOUT",
+            "AGREE"
+          ]
+        }
+      ]
+    }
+  ],
+  "sourceEvidence": "scratch/bradbury_canary/p7-final-thesis-v2-20260916/p7-final-thesis.json"
+}

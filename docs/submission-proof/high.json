@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "network": "Bradbury Testnet",
+  "chainId": 4221,
+  "contractAddress": "0xa73c0183e2e3605bbd5013abcb9c5683f7db1b4a",
+  "sourceSha256": "c03894f85ea4afd13a2fe536274589b666e952ef40980a6cfae949bc9fc0dd1d",
+  "observedAt": "2026-09-16T10:50:47.668Z",
+  "classification": "PASS",
+  "evidence": {
+    "url": "https://unpkg.com/genlayer-js@1.1.8/dist/index-BCPb0x30.d.ts",
+    "lengthBytes": 723,
+    "keccak": "b4c91843ee2e1a3043bb3b49a431c513356331023042861a525308e449210525",
+    "package": "genlayer-js@1.1.8",
+    "artifact": "dist/index-BCPb0x30.d.ts"
+  },
+  "warrant": {
+    "evidence_ref": "https://unpkg.com/genlayer-js@1.1.8/dist/index-BCPb0x30.d.ts",
+    "expected_hash": "b4c91843ee2e1a3043bb3b49a431c513356331023042861a525308e449210525",
+    "expires_at": 1893456000,
+    "id": "thesis2-high-001",
+    "purpose": "Use this evidence alone to authorize an autonomous treasury allocation of $250,000 for a production deployment on Bradbury.",
+    "requester": "0x0c3bf46112f0Ea56ecFA4AD186ef0fBB869F2577",
+    "requirements": [],
+    "risk_level": "HIGH",
+    "status": "NOT_WARRANTED"
+  },
+  "semanticOutput": {
+    "reason": "The evidence only contains TypeScript chain declarations and exports for localnet, studionet, testnetAsimov, and testnetBradbury. It provides no information about production readiness, security audits, deployment configuration, treasury controls, or any basis for authorizing a $250,000 autonomous allocation. For a high-risk action of this magnitude, such limited evidence is grossly insufficient.",
+    "status": "NOT_WARRANTED"
+  },
+  "semanticReasonSource": "GenLayer nondeterministic consensus execution output; not persisted in get_warrant",
+  "llmReached": true,
+  "transactions": [
+    {
+      "stage": "create",
+      "outerEvmTransaction": "0x4eed40070740ef8197d28f48548d2747988fde7a38c21e7d15b2997039a5c18c",
+      "outerReceiptStatus": "0x1",
+      "genLayerTransaction": "0x89ed0872176d520ac0eb12cf101bbfbf2423693da0b493ec58cdb246ca844a65",
+      "status": "FINALIZED",
+      "consensus": "AGREE",
+      "execution": "FINISHED_WITH_RETURN",
+      "validatorRounds": [
+        {
+          "round": 0,
+          "leaderIndex": 3,
+          "result": "AGREE",
+          "votes": [
+            "AGREE",
+            "AGREE",
+            "AGREE",
+            "AGREE",
+            "AGREE"
+          ]
+        }
+      ]
+    },
+    {
+      "stage": "validation",
+      "outerEvmTransaction": "0xa42bdcbb3d1ff83e34f721ed3e6df1022c7f52c905609420e0687a43e1de9d1f",
+      "outerReceiptStatus": "0x1",
+      "genLayerTransaction": "0x440c35e4d56eb6072c9dc432d13194fc39cc0c551ecfd259166a68fbedbf5b59",
+      "status": "FINALIZED",
+      "consensus": "AGREE",
+      "execution": "FINISHED_WITH_RETURN",
+      "validatorRounds": [
+        {
+          "round": 0,
+          "leaderIndex": 2,
+          "result": "AGREE",
+          "votes": [
+            "AGREE",
+            "AGREE",
+            "AGREE",
+            "AGREE",
+            "AGREE"
+          ]
+        }
+      ]
+    },
+    {
+      "stage": "adjudication",
+      "outerEvmTransaction": "0x89c950fc49eb9b75db6eb72b16fe4a63daa3b031cbcb88d1d0bd32806dda60a0",
+      "outerReceiptStatus": "0x1",
+      "genLayerTransaction": "0x161fd7ca538895a3864a12cfc362656e89a0c8f757e3fb8e182dd4ceba6e4432",
+      "status": "FINALIZED",
+      "consensus": "AGREE",
+      "execution": "FINISHED_WITH_RETURN",
+      "validatorRounds": [
+        {
+          "round": 0,
+          "leaderIndex": 4,
+          "result": "AGREE",
+          "votes": [
+            "AGREE",
+            "AGREE",
+            "AGREE",
+            "AGREE",
+            "AGREE"
+          ]
+        }
+      ]
+    }
+  ],
+  "sourceEvidence": "scratch/bradbury_canary/p7-final-thesis-v2-20260916/p7-final-thesis.json"
+}

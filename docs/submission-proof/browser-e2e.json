@@ -1,0 +1,251 @@
+{
+  "schemaVersion": 1,
+  "network": "Bradbury Testnet",
+  "chainId": 4221,
+  "contractAddress": "0xa73c0183e2e3605bbd5013abcb9c5683f7db1b4a",
+  "sourceSha256": "c03894f85ea4afd13a2fe536274589b666e952ef40980a6cfae949bc9fc0dd1d",
+  "classification": "PASS",
+  "wallet": "MetaMask selected through EIP-6963 in Windows Chrome",
+  "signer": "0xb01eec514b68ce98e346572e2bc3a736bf3ac828",
+  "evidence": {
+    "url": "https://unpkg.com/genlayer-js@1.1.8/dist/index-BCPb0x30.d.ts",
+    "lengthBytes": 723,
+    "keccak": "b4c91843ee2e1a3043bb3b49a431c513356331023042861a525308e449210525",
+    "package": "genlayer-js@1.1.8",
+    "artifact": "dist/index-BCPb0x30.d.ts"
+  },
+  "warrant": {
+    "evidence_ref": "https://unpkg.com/genlayer-js@1.1.8/dist/index-BCPb0x30.d.ts",
+    "expected_hash": "b4c91843ee2e1a3043bb3b49a431c513356331023042861a525308e449210525",
+    "expires_at": 1790173721,
+    "id": "warrant-4905a143-4d22-4603-9763-c15e87166a47",
+    "purpose": "Use this evidence to prepare an internal developer note listing the declared GenLayerJS testnet network exports.",
+    "requester": "0xB01eec514b68ce98E346572e2BC3a736bf3Ac828",
+    "requirements": [],
+    "risk_level": "LOW",
+    "status": "WARRANTED"
+  },
+  "lifecycle": [
+    "PENDING",
+    "PENDING_AI",
+    "WARRANTED"
+  ],
+  "transactions": [
+    {
+      "stage": "create",
+      "outerEvmTransaction": "0xb5e0ec847c5cc76035add6cc473e5b7871a1c1ecc32cfcfbdbdfc497a52269cc",
+      "outerReceiptStatus": "0x1",
+      "outerGasLimit": 2000000,
+      "genLayerTransaction": "0xd52dd4e6a91ada6de3385e724094b4ade2136529a618b9e75881af28f78be0ff",
+      "status": "FINALIZED",
+      "consensus": "AGREE",
+      "execution": "FINISHED_WITH_RETURN",
+      "validatorRounds": [
+        {
+          "round": 0,
+          "leaderIndex": 3,
+          "result": 1,
+          "validators": [
+            "0x96298d411a2d622945beaca6112374583b501d52",
+            "0x3f5caed686336ed9cf3dede61154b0cd67fb9bd7",
+            "0x4cd1ab61867487f45988db08eb18bd00e20c518a",
+            "0x27276953fa2052a5178ae5a3d114a3dfb9a2fc98",
+            "0xfd811b16001077243e07173ec72a4735ff04c3aa"
+          ],
+          "votes": [
+            "AGREE",
+            "AGREE",
+            "AGREE",
+            "AGREE",
+            "AGREE"
+          ]
+        }
+      ],
+      "nondeterministicOutputs": [
+        {
+          "raw": "0x706164646564"
+        }
+      ]
+    },
+    {
+      "stage": "retrieve_and_validate",
+      "outerEvmTransaction": "0x80189955bea25a5ca9aa2f4f6911eb4c56b857b822ca941b8d804807396d93c2",
+      "outerReceiptStatus": "0x1",
+      "outerGasLimit": 2000000,
+      "genLayerTransaction": "0xbde29321eb3633a8a7f808d295d671b260711cb6045c96acff732956bf01e263",
+      "status": "FINALIZED",
+      "consensus": "AGREE",
+      "execution": "FINISHED_WITH_RETURN",
+      "validatorRounds": [
+        {
+          "round": 0,
+          "leaderIndex": 0,
+          "result": 1,
+          "validators": [
+            "0xb4fb7adc6877a6a16bd131c7c9270834bd3def34",
+            "0x3f5caed686336ed9cf3dede61154b0cd67fb9bd7",
+            "0x9f6aa7364d20cf25f054ea83f3cb950317fd34b6",
+            "0x4fc292d5d255ec8ad4cdcd36c5e188dfee9d160e",
+            "0x77a07271abb443f55be19c357aa35206beb63e1d"
+          ],
+          "votes": [
+            "AGREE",
+            "AGREE",
+            "AGREE",
+            "AGREE",
+            "AGREE"
+          ]
+        }
+      ],
+      "nondeterministicOutputs": [
+        {
+          "resultCode": 0,
+          "value": {
+            "fetch_status": "FETCHED",
+            "hash": "b4c91843ee2e1a3043bb3b49a431c513356331023042861a525308e449210525"
+          }
+        },
+        {
+          "raw": "0x706164646564"
+        }
+      ]
+    },
+    {
+      "stage": "adjudicate",
+      "outerEvmTransaction": "0x43984ea394d373334e7c6b8582b998f0fc48f58824f7263364cc2f33ce394124",
+      "outerReceiptStatus": "0x1",
+      "outerGasLimit": 2000000,
+      "genLayerTransaction": "0x8db8bb96fea7db6d2145c54bba7b67e98578c68c0184692a95d2fe16a396e877",
+      "status": "FINALIZED",
+      "consensus": "AGREE",
+      "execution": "FINISHED_WITH_RETURN",
+      "validatorRounds": [
+        {
+          "round": 0,
+          "leaderIndex": 3,
+          "result": 0,
+          "validators": [
+            "0xb4fb7adc6877a6a16bd131c7c9270834bd3def34",
+            "0x4fc292d5d255ec8ad4cdcd36c5e188dfee9d160e",
+            "0xb93a46b843fb32e8ce392e68edfe93faa4a40817",
+            "0x3f5caed686336ed9cf3dede61154b0cd67fb9bd7",
+            "0xf01877b6ac60861ca3b134e0e483c482679b4682"
+          ],
+          "votes": [
+            "NOT_VOTED",
+            "NOT_VOTED",
+            "NOT_VOTED",
+            "NOT_VOTED",
+            "NOT_VOTED"
+          ]
+        },
+        {
+          "round": 0,
+          "leaderIndex": 0,
+          "result": 0,
+          "validators": [],
+          "votes": []
+        },
+        {
+          "round": 0,
+          "leaderIndex": 4,
+          "result": 1,
+          "validators": [
+            "0xb4fb7adc6877a6a16bd131c7c9270834bd3def34",
+            "0x4fc292d5d255ec8ad4cdcd36c5e188dfee9d160e",
+            "0xb93a46b843fb32e8ce392e68edfe93faa4a40817",
+            "0x3f5caed686336ed9cf3dede61154b0cd67fb9bd7",
+            "0xf01877b6ac60861ca3b134e0e483c482679b4682"
+          ],
+          "votes": [
+            "TIMEOUT",
+            "AGREE",
+            "AGREE",
+            "TIMEOUT",
+            "AGREE"
+          ]
+        }
+      ],
+      "nondeterministicOutputs": [
+        {
+          "resultCode": 0,
+          "value": {
+            "reason": "The evidence directly shows the declared GenLayerJS network exports and their names: localnet, studionet, testnetAsimov, and testnetBradbury. For the low-risk purpose of preparing an internal developer note listing declared testnet network exports, this is sufficient evidence.",
+            "status": "WARRANTED"
+          }
+        },
+        {
+          "raw": "0x706164646564"
+        }
+      ]
+    }
+  ],
+  "semanticOutput": {
+    "reason": "The evidence directly shows the declared GenLayerJS network exports and their names: localnet, studionet, testnetAsimov, and testnetBradbury. For the low-risk purpose of preparing an internal developer note listing declared testnet network exports, this is sufficient evidence.",
+    "status": "WARRANTED"
+  },
+  "semanticReasonSource": "GenLayer nondeterministic consensus execution output; not persisted in get_warrant",
+  "llmReached": true,
+  "infrastructureFailure": false,
+  "coldReloadVerification": {
+    "observedAt": "2026-09-16T18:13:12.863Z",
+    "classification": "PASS",
+    "scope": "Read-only fresh browser context after all three existing GenLayer receipts finalized",
+    "warrantId": "warrant-4905a143-4d22-4603-9763-c15e87166a47",
+    "checks": [
+      {
+        "name": "finalized warrant displayed",
+        "status": "PASS",
+        "detail": "warrant-4905a143-4d22-4603-9763-c15e87166a47"
+      },
+      {
+        "name": "stored purpose displayed",
+        "status": "PASS",
+        "detail": "Use this evidence to prepare an internal developer note listing the declared GenLayerJS testnet network exports."
+      },
+      {
+        "name": "stored evidence identity displayed",
+        "status": "PASS",
+        "detail": "b4c91843ee2e1a3043bb3b49a431c513356331023042861a525308e449210525"
+      },
+      {
+        "name": "fresh context needs no signer",
+        "status": "PASS",
+        "detail": "Contract-backed verdict displayed without transaction tracking or wallet authorization"
+      },
+      {
+        "name": "finalized verdict survives cold reload",
+        "status": "PASS",
+        "detail": "Fresh server-side contract read"
+      },
+      {
+        "name": "real LOW and HIGH displayed",
+        "status": "PASS",
+        "detail": "Existing final P7 warrants; read-only"
+      },
+      {
+        "name": "same evidence verified",
+        "status": "PASS",
+        "detail": "Real stored URL/hash/requirements"
+      },
+      {
+        "name": "no app runtime error",
+        "status": "PASS",
+        "detail": ""
+      }
+    ],
+    "errors": []
+  },
+  "userInteraction": [
+    "Chrome debugging authorization",
+    "MetaMask connection/account authorization",
+    "Bradbury network approval",
+    "Create signature",
+    "Retrieve/validate signature",
+    "Adjudicate signature"
+  ],
+  "additionalFinalizationTransactionsSubmitted": false,
+  "lifecycleTransactionsResubmitted": false,
+  "sourceEvidence": "scratch/bradbury_canary/frontend-bradbury-migration-20260916/frontend-live-e2e-final.json",
+  "gasAdapter": "max(2000000, ceil(SDK estimate * 1.5))"
+}

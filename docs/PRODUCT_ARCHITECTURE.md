@@ -1,3 +1,6 @@
+> **Historical record — superseded 2026-09-16.** Studionet-era product description; final browser configuration uses Bradbury 4221 and the repaired deployment.
+> Final canonical contract: `0xa73c0183e2e3605bbd5013abcb9c5683f7db1b4a`, Bradbury chain 4221. See the [current README](../README.md) and [final proof](submission-proof/README.md). Original content is preserved below.
+
 # Product Architecture
 
 ## Overview

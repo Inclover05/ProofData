@@ -1,0 +1,367 @@
+{
+  "observedAt": "2026-09-16T18:31:41.063Z",
+  "classification": "PASS",
+  "mode": "public read-only",
+  "contractAddress": "0xa73c0183e2e3605bbd5013abcb9c5683f7db1b4a",
+  "chainId": 4221,
+  "sourceSha256": "c03894f85ea4afd13a2fe536274589b666e952ef40980a6cfae949bc9fc0dd1d",
+  "deployedCodeMatchesSource": true,
+  "fixtureLength": 723,
+  "fixtureKeccak": "b4c91843ee2e1a3043bb3b49a431c513356331023042861a525308e449210525",
+  "bundleManifestVerified": false,
+  "deployment": {
+    "stage": "deployment",
+    "outerEvmTransaction": "0xd1595219d09786f16c07c959733083075c8bad2a415fa819edf6e9bfefe7daa5",
+    "genLayerTransaction": "0x97691f5fd33ad0daaaefa67570a785a3a5af9a56e1724605fcf7547a49089f6d",
+    "outerReceiptStatus": "0x1",
+    "status": "FINALIZED",
+    "consensus": "AGREE",
+    "execution": "FINISHED_WITH_RETURN",
+    "validatorRounds": [
+      {
+        "round": 0,
+        "leaderIndex": 2,
+        "result": 1,
+        "votes": [
+          "AGREE",
+          "AGREE",
+          "AGREE",
+          "AGREE",
+          "AGREE"
+        ]
+      }
+    ],
+    "nondeterministicOutputs": []
+  },
+  "cases": [
+    {
+      "warrant": {
+        "evidence_ref": "https://unpkg.com/genlayer-js@1.1.8/dist/index-BCPb0x30.d.ts",
+        "expected_hash": "b4c91843ee2e1a3043bb3b49a431c513356331023042861a525308e449210525",
+        "expires_at": 1893456000,
+        "id": "storage-fix-low-diag-001",
+        "purpose": "Use this evidence to prepare an internal technical note stating that GenLayerJS supports Bradbury as a testnet network for dApp clients.",
+        "requester": "0x0c3bf46112f0Ea56ecFA4AD186ef0fBB869F2577",
+        "requirements": [],
+        "risk_level": "LOW",
+        "status": "WARRANTED"
+      },
+      "transactions": [
+        {
+          "stage": "create",
+          "outerEvmTransaction": "0xe82f24cb369017f577cfd6fcac6e274a3bc9fc6eeff259476e634907cbcc8f3e",
+          "genLayerTransaction": "0xf298ba75200a82297a5148f36f901d3a019d5939629db0a0bcb8503691e278e6",
+          "outerReceiptStatus": "0x1",
+          "status": "FINALIZED",
+          "consensus": "AGREE",
+          "execution": "FINISHED_WITH_RETURN",
+          "validatorRounds": [
+            {
+              "round": 0,
+              "leaderIndex": 2,
+              "result": 1,
+              "votes": [
+                "AGREE",
+                "AGREE",
+                "AGREE",
+                "AGREE",
+                "AGREE"
+              ]
+            }
+          ],
+          "nondeterministicOutputs": []
+        },
+        {
+          "stage": "validation",
+          "outerEvmTransaction": "0xd3c0ec15ff391e7582f8ade49327e981dc544f349b518eb512a591516964f573",
+          "genLayerTransaction": "0xe13cfe72420123b175236e0c50e82b927b02971d09409b53165c0f9d0ad66d81",
+          "outerReceiptStatus": "0x1",
+          "status": "FINALIZED",
+          "consensus": "AGREE",
+          "execution": "FINISHED_WITH_RETURN",
+          "validatorRounds": [
+            {
+              "round": 0,
+              "leaderIndex": 3,
+              "result": 1,
+              "votes": [
+                "AGREE",
+                "AGREE",
+                "AGREE",
+                "AGREE",
+                "AGREE"
+              ]
+            }
+          ],
+          "nondeterministicOutputs": [
+            {
+              "fetch_status": "FETCHED",
+              "hash": "b4c91843ee2e1a3043bb3b49a431c513356331023042861a525308e449210525"
+            }
+          ]
+        },
+        {
+          "stage": "adjudication",
+          "outerEvmTransaction": "0x31056320b0119b00c08baa2d6dcc02f3b24538376087cfa99459a0d2c4e246cc",
+          "genLayerTransaction": "0x4c4ecc96b793b180e005939aee7f3e2a5596dc1d9abaa5ca98d6add951d4a067",
+          "outerReceiptStatus": "0x1",
+          "status": "FINALIZED",
+          "consensus": "AGREE",
+          "execution": "FINISHED_WITH_RETURN",
+          "validatorRounds": [
+            {
+              "round": 0,
+              "leaderIndex": 0,
+              "result": 0,
+              "votes": [
+                "NOT_VOTED",
+                "NOT_VOTED",
+                "NOT_VOTED",
+                "NOT_VOTED",
+                "NOT_VOTED"
+              ]
+            },
+            {
+              "round": 0,
+              "leaderIndex": 0,
+              "result": 0,
+              "votes": []
+            },
+            {
+              "round": 0,
+              "leaderIndex": 1,
+              "result": 1,
+              "votes": [
+                "TIMEOUT",
+                "AGREE",
+                "AGREE",
+                "TIMEOUT",
+                "AGREE"
+              ]
+            }
+          ],
+          "nondeterministicOutputs": [
+            {
+              "reason": "The provided code evidence explicitly declares and exports a 'testnetBradbury' constant of type 'GenLayerChain'. This directly satisfies the low-risk purpose of preparing an internal technical note stating that GenLayerJS supports Bradbury as a testnet network for dApp clients. No further validation is required at this risk level.",
+              "status": "WARRANTED"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "warrant": {
+        "evidence_ref": "https://unpkg.com/genlayer-js@1.1.8/dist/index-BCPb0x30.d.ts",
+        "expected_hash": "b4c91843ee2e1a3043bb3b49a431c513356331023042861a525308e449210525",
+        "expires_at": 1893456000,
+        "id": "thesis2-high-001",
+        "purpose": "Use this evidence alone to authorize an autonomous treasury allocation of $250,000 for a production deployment on Bradbury.",
+        "requester": "0x0c3bf46112f0Ea56ecFA4AD186ef0fBB869F2577",
+        "requirements": [],
+        "risk_level": "HIGH",
+        "status": "NOT_WARRANTED"
+      },
+      "transactions": [
+        {
+          "stage": "create",
+          "outerEvmTransaction": "0x4eed40070740ef8197d28f48548d2747988fde7a38c21e7d15b2997039a5c18c",
+          "genLayerTransaction": "0x89ed0872176d520ac0eb12cf101bbfbf2423693da0b493ec58cdb246ca844a65",
+          "outerReceiptStatus": "0x1",
+          "status": "FINALIZED",
+          "consensus": "AGREE",
+          "execution": "FINISHED_WITH_RETURN",
+          "validatorRounds": [
+            {
+              "round": 0,
+              "leaderIndex": 3,
+              "result": 1,
+              "votes": [
+                "AGREE",
+                "AGREE",
+                "AGREE",
+                "AGREE",
+                "AGREE"
+              ]
+            }
+          ],
+          "nondeterministicOutputs": []
+        },
+        {
+          "stage": "validation",
+          "outerEvmTransaction": "0xa42bdcbb3d1ff83e34f721ed3e6df1022c7f52c905609420e0687a43e1de9d1f",
+          "genLayerTransaction": "0x440c35e4d56eb6072c9dc432d13194fc39cc0c551ecfd259166a68fbedbf5b59",
+          "outerReceiptStatus": "0x1",
+          "status": "FINALIZED",
+          "consensus": "AGREE",
+          "execution": "FINISHED_WITH_RETURN",
+          "validatorRounds": [
+            {
+              "round": 0,
+              "leaderIndex": 2,
+              "result": 1,
+              "votes": [
+                "AGREE",
+                "AGREE",
+                "AGREE",
+                "AGREE",
+                "AGREE"
+              ]
+            }
+          ],
+          "nondeterministicOutputs": [
+            {
+              "fetch_status": "FETCHED",
+              "hash": "b4c91843ee2e1a3043bb3b49a431c513356331023042861a525308e449210525"
+            }
+          ]
+        },
+        {
+          "stage": "adjudication",
+          "outerEvmTransaction": "0x89c950fc49eb9b75db6eb72b16fe4a63daa3b031cbcb88d1d0bd32806dda60a0",
+          "genLayerTransaction": "0x161fd7ca538895a3864a12cfc362656e89a0c8f757e3fb8e182dd4ceba6e4432",
+          "outerReceiptStatus": "0x1",
+          "status": "FINALIZED",
+          "consensus": "AGREE",
+          "execution": "FINISHED_WITH_RETURN",
+          "validatorRounds": [
+            {
+              "round": 0,
+              "leaderIndex": 4,
+              "result": 1,
+              "votes": [
+                "AGREE",
+                "AGREE",
+                "AGREE",
+                "AGREE",
+                "AGREE"
+              ]
+            }
+          ],
+          "nondeterministicOutputs": [
+            {
+              "reason": "The evidence only contains TypeScript chain declarations and exports for localnet, studionet, testnetAsimov, and testnetBradbury. It provides no information about production readiness, security audits, deployment configuration, treasury controls, or any basis for authorizing a $250,000 autonomous allocation. For a high-risk action of this magnitude, such limited evidence is grossly insufficient.",
+              "status": "NOT_WARRANTED"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "warrant": {
+        "evidence_ref": "https://unpkg.com/genlayer-js@1.1.8/dist/index-BCPb0x30.d.ts",
+        "expected_hash": "b4c91843ee2e1a3043bb3b49a431c513356331023042861a525308e449210525",
+        "expires_at": 1790173721,
+        "id": "warrant-4905a143-4d22-4603-9763-c15e87166a47",
+        "purpose": "Use this evidence to prepare an internal developer note listing the declared GenLayerJS testnet network exports.",
+        "requester": "0xB01eec514b68ce98E346572e2BC3a736bf3Ac828",
+        "requirements": [],
+        "risk_level": "LOW",
+        "status": "WARRANTED"
+      },
+      "transactions": [
+        {
+          "stage": "create",
+          "outerEvmTransaction": "0xb5e0ec847c5cc76035add6cc473e5b7871a1c1ecc32cfcfbdbdfc497a52269cc",
+          "genLayerTransaction": "0xd52dd4e6a91ada6de3385e724094b4ade2136529a618b9e75881af28f78be0ff",
+          "outerReceiptStatus": "0x1",
+          "status": "FINALIZED",
+          "consensus": "AGREE",
+          "execution": "FINISHED_WITH_RETURN",
+          "validatorRounds": [
+            {
+              "round": 0,
+              "leaderIndex": 3,
+              "result": 1,
+              "votes": [
+                "AGREE",
+                "AGREE",
+                "AGREE",
+                "AGREE",
+                "AGREE"
+              ]
+            }
+          ],
+          "nondeterministicOutputs": []
+        },
+        {
+          "stage": "retrieve_and_validate",
+          "outerEvmTransaction": "0x80189955bea25a5ca9aa2f4f6911eb4c56b857b822ca941b8d804807396d93c2",
+          "genLayerTransaction": "0xbde29321eb3633a8a7f808d295d671b260711cb6045c96acff732956bf01e263",
+          "outerReceiptStatus": "0x1",
+          "status": "FINALIZED",
+          "consensus": "AGREE",
+          "execution": "FINISHED_WITH_RETURN",
+          "validatorRounds": [
+            {
+              "round": 0,
+              "leaderIndex": 0,
+              "result": 1,
+              "votes": [
+                "AGREE",
+                "AGREE",
+                "AGREE",
+                "AGREE",
+                "AGREE"
+              ]
+            }
+          ],
+          "nondeterministicOutputs": [
+            {
+              "fetch_status": "FETCHED",
+              "hash": "b4c91843ee2e1a3043bb3b49a431c513356331023042861a525308e449210525"
+            }
+          ]
+        },
+        {
+          "stage": "adjudicate",
+          "outerEvmTransaction": "0x43984ea394d373334e7c6b8582b998f0fc48f58824f7263364cc2f33ce394124",
+          "genLayerTransaction": "0x8db8bb96fea7db6d2145c54bba7b67e98578c68c0184692a95d2fe16a396e877",
+          "outerReceiptStatus": "0x1",
+          "status": "FINALIZED",
+          "consensus": "AGREE",
+          "execution": "FINISHED_WITH_RETURN",
+          "validatorRounds": [
+            {
+              "round": 0,
+              "leaderIndex": 3,
+              "result": 0,
+              "votes": [
+                "NOT_VOTED",
+                "NOT_VOTED",
+                "NOT_VOTED",
+                "NOT_VOTED",
+                "NOT_VOTED"
+              ]
+            },
+            {
+              "round": 0,
+              "leaderIndex": 0,
+              "result": 0,
+              "votes": []
+            },
+            {
+              "round": 0,
+              "leaderIndex": 4,
+              "result": 1,
+              "votes": [
+                "TIMEOUT",
+                "AGREE",
+                "AGREE",
+                "TIMEOUT",
+                "AGREE"
+              ]
+            }
+          ],
+          "nondeterministicOutputs": [
+            {
+              "reason": "The evidence directly shows the declared GenLayerJS network exports and their names: localnet, studionet, testnetAsimov, and testnetBradbury. For the low-risk purpose of preparing an internal developer note listing declared testnet network exports, this is sufficient evidence.",
+              "status": "WARRANTED"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "existingWritesVerified": 10,
+  "newTransactionsSubmitted": 0
+}

@@ -1,3 +1,13 @@
+# Final semantic adjudication behavior
+
+`PENDING` records inputs; `retrieve_and_validate` performs the HTTPS/runtime-expiry/fetch/hash gate; `PENDING_AI` permits adjudication. The repaired adjudication snapshots storage into memory, refetches and checks text identity, executes the unchanged JSON prompt, independently compares validator status, then writes contract status.
+
+`WARRANTED`, `CONDITIONAL`, `NOT_WARRANTED` and `INCONCLUSIVE` are application statuses, separate from protocol finalization. An agreed, finalized `INCONCLUSIVE` may come from infrastructure rather than semantic reasoning. The broad `Fetch error` label covers the whole leader path and cannot identify failure source alone. Verify actual execution output before calling a result semantic. Reasons are not stored by `get_warrant`.
+
+The final LOW/HIGH pair genuinely reached LLM execution and returned `WARRANTED` / `NOT_WARRANTED`. See [architecture](SUBMISSION_ARCHITECTURE.md) and [proof](submission-proof/README.md).
+
+## Earlier description — historical reference only
+
 # Semantic Adjudication State Machine
 
 ## Warrant Application Lifecycle

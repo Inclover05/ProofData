@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "network": "Bradbury Testnet",
+  "chainId": 4221,
+  "contractAddress": "0xa73c0183e2e3605bbd5013abcb9c5683f7db1b4a",
+  "sourceSha256": "c03894f85ea4afd13a2fe536274589b666e952ef40980a6cfae949bc9fc0dd1d",
+  "frontendCheckpoint": "9c2901cd2dcc37a9b9d06abbf57354de22755484",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 3414,
+      "sha256": "0c7b6aa49df1987453345f11cc97df18f04bf9626e0f276d555aabdc70876136"
+    },
+    {
+      "path": "browser-e2e.json",
+      "bytes": 8601,
+      "sha256": "38fcef5434021499183bd85f11114a82543fa103c7097f4638127fe296cd041e"
+    },
+    {
+      "path": "deployment.json",
+      "bytes": 1405,
+      "sha256": "873ef8b2c4257186ad3380bfb7c8ca555256107014c4f836ede9d9f85f58ad49"
+    },
+    {
+      "path": "fixture/index-BCPb0x30.d.ts",
+      "bytes": 723,
+      "sha256": "29aab1d4c1a2844571f83c6cead4558c5e57af776d5f89e7e9c79751c5c291ee"
+    },
+    {
+      "path": "high.json",
+      "bytes": 3784,
+      "sha256": "39eda17979bf3e5592730d1141a90a398a6e6861926ec9470fc1987e88f12da6"
+    },
+    {
+      "path": "low.json",
+      "bytes": 4111,
+      "sha256": "f772ee8ec82641d001af7bf72a7dd379498afabeb76ac0356392d9c4fb3e4f2d"
+    },
+    {
+      "path": "same-evidence.json",
+      "bytes": 1313,
+      "sha256": "788515958f203612d68505d9be25926b6e217edaede859eeb4a5a70466cfbac6"
+    },
+    {
+      "path": "verification-browser.json",
+      "bytes": 1787,
+      "sha256": "a17fbf69c8f918a975be9ea66c098ea119ab7ab8c32371032b317f6273e2f759"
+    },
+    {
+      "path": "verification-live.json",
+      "bytes": 12764,
+      "sha256": "18e105d10fb7ef2e0401223c12731245c1d7932787e13be7afff75a5fe5e5645"
+    },
+    {
+      "path": "verification.json",
+      "bytes": 3696,
+      "sha256": "901c98b8512254e51e90dadcb711e393c48d61e3153a49be7f28e7db61f667dc"
+    }
+  ],
+  "totalArtifactBytesExcludingManifest": 41598,
+  "provenance": [
+    {
+      "repositoryRelativePath": "scratch/bradbury_canary/p7-final-thesis-v2-20260916/p7-final-thesis.json",
+      "sha256": "73aa4b538999ae258625056a1ded2ec8114c2bd3c8b296cd9700c2cd87706cb0",
+      "availability": "Preserved local larger evidence; compact committed projections included here"
+    },
+    {
+      "repositoryRelativePath": "scratch/bradbury_canary/frontend-bradbury-migration-20260916/frontend-live-e2e-final.json",
+      "sha256": "53f452d86c4d5557c6fdcc7c9202eb6f77fb4ae080926748f0c51b810d0db4b5",
+      "availability": "Preserved local larger evidence; compact committed projections included here"
+    }
+  ],
+  "note": "SHA-256 file checksums are local package integrity, not signatures. Evidence identity is Keccak-256. Manifest does not hash itself."
+}

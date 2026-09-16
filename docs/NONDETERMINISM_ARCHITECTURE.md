@@ -1,3 +1,6 @@
+> **Historical record — superseded 2026-09-16.** Earlier nondeterministic boundary analysis; final storage-to-memory repair and implementation are documented in SUBMISSION_ARCHITECTURE.md.
+> Final canonical contract: `0xa73c0183e2e3605bbd5013abcb9c5683f7db1b4a`, Bradbury chain 4221. See the [current README](../README.md) and [final proof](submission-proof/README.md). Original content is preserved below.
+
 # ProofData Non-Determinism Architecture
 
 ProofData must remain a genuine GenLayer Intelligent Contract application. Its core thesis relies on combining objective cryptography with subjective semantic consensus. 

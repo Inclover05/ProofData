@@ -1,3 +1,13 @@
+# Final browser transaction lifecycle
+
+Browser writes have two identifiers: an outer EVM hash and a GenLayer transaction ID. Outer receipt `0x1` proves inclusion, not GenVM execution. The frontend uses `gen_getTransactionReceipt` with object `{txId}` parameters and tracks both layers independently.
+
+`ACCEPTED` and the stable SDK's `READY_TO_FINALIZE` mapping remain nonterminal. Successful completion requires stored `FINALIZED`, consensus `AGREE` or `MAJORITY_AGREE`, and `FINISHED_WITH_RETURN`. Outer `0x0` is failure. RPC errors remain readable and do not trigger automatic signing retries. Scoped persisted IDs resume reads after reload; they never repeat writes.
+
+All three fresh MetaMask E2E writes are finalized. The observed Bradbury node did not expose `gen_getTransactionLifecycle` (`-32601`); stored status and full receipts proved finalization without projecting `resolutionAction`. No extra finalization write was needed. See [browser proof](submission-proof/browser-e2e.json), [architecture](SUBMISSION_ARCHITECTURE.md) and [official finality documentation](https://docs.genlayer.com/understand-genlayer-protocol/core-concepts/optimistic-democracy/finality).
+
+## Earlier description — historical reference only
+
 # Transaction Lifecycle
 
 ## Hash Duality

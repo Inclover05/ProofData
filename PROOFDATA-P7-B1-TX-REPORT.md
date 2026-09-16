@@ -1,3 +1,6 @@
+> **Historical record — superseded 2026-09-16.** Transport-era record. The claim that skipped adjudication proved semantic execution, and the claimed MIT-license LLM interpretation, are unsupported by verified semantic output.
+> Final canonical contract: `0xa73c0183e2e3605bbd5013abcb9c5683f7db1b4a`, Bradbury chain 4221. See the [current README](README.md) and [final proof](docs/submission-proof/README.md). Original content is preserved below.
+
 # PROOFDATA P7-B1-TX REPORT
 
 ## 1. Upstream Issue #402 Verified

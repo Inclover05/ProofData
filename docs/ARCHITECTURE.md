@@ -1,3 +1,6 @@
+> **Historical record — superseded 2026-09-16.** Frozen feasibility architecture. Some expiry, fallback and security descriptions overstate the current source; use SUBMISSION_ARCHITECTURE.md for precise final behavior.
+> Final canonical contract: `0xa73c0183e2e3605bbd5013abcb9c5683f7db1b4a`, Bradbury chain 4221. See the [current README](../README.md) and [final proof](submission-proof/README.md). Original content is preserved below.
+
 # VALIDATED FEASIBILITY ARCHITECTURE
 
 ## 1. Core Primitive

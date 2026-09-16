@@ -1,3 +1,6 @@
+> **Historical record — superseded 2026-09-16.** Phase 4B onboarding; submission entry point is now README.md.
+> Final canonical contract: `0xa73c0183e2e3605bbd5013abcb9c5683f7db1b4a`, Bradbury chain 4221. See the [current README](README.md) and [final proof](docs/submission-proof/README.md). Original content is preserved below.
+
 # ProofData Phase 4B — Start Here
 
 This folder is a **technical feasibility spike**, not the full hackathon product.

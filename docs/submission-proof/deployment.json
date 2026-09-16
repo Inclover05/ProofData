@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "network": "Bradbury Testnet",
+  "chainId": 4221,
+  "contractAddress": "0xa73c0183e2e3605bbd5013abcb9c5683f7db1b4a",
+  "sourceSha256": "c03894f85ea4afd13a2fe536274589b666e952ef40980a6cfae949bc9fc0dd1d",
+  "sourcePath": "contracts/reliance_warrant.py",
+  "sourceCheckpoint": "35c0b3865a6d8a455556c110f005fb1561141e7d",
+  "runnerDependency": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6",
+  "deployedCodeMatchesSource": true,
+  "transaction": {
+    "stage": "deployment",
+    "outerEvmTransaction": "0xd1595219d09786f16c07c959733083075c8bad2a415fa819edf6e9bfefe7daa5",
+    "outerReceiptStatus": "0x1",
+    "genLayerTransaction": "0x97691f5fd33ad0daaaefa67570a785a3a5af9a56e1724605fcf7547a49089f6d",
+    "status": "FINALIZED",
+    "consensus": "AGREE",
+    "execution": "FINISHED_WITH_RETURN",
+    "validatorRounds": [
+      {
+        "round": 0,
+        "leaderIndex": 2,
+        "result": "AGREE",
+        "votes": [
+          "AGREE",
+          "AGREE",
+          "AGREE",
+          "AGREE",
+          "AGREE"
+        ]
+      }
+    ]
+  },
+  "historicalPreFixDeployment": {
+    "address": "0xb0557237CcEB48cAB5c32e4DAd5C087CB9126e0B",
+    "classification": "Historical pre-fix; not canonical; persistent storage access inside nondeterministic adjudication"
+  },
+  "sourceEvidence": "scratch/bradbury_canary/p7-final-thesis-v2-20260916/p7-final-thesis.json"
+}
