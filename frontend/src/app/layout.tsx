@@ -38,7 +38,7 @@ export default function RootLayout({
             <nav className="flex items-center gap-6 text-sm font-medium">
               <Link href="/create" className="text-text-secondary hover:text-text-primary transition-colors">Create Warrant</Link>
               <Link href="/compare" className="text-text-secondary hover:text-text-primary transition-colors">Compare</Link>
-              <Link href="/warrant/demo" className="text-text-secondary hover:text-text-primary transition-colors">Demo Warrant</Link>
+              <Link href="/warrant/demo" className="text-text-secondary hover:text-text-primary transition-colors">Proof Warrant</Link>
             </nav>
           </div>
         </header>

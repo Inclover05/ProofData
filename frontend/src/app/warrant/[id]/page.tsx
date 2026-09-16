@@ -1,5 +1,8 @@
 import Link from "next/link";
-import { createClient, chains } from "genlayer-js";
+import { FINAL_PROOF } from "@/lib/genlayer/config";
+import { readWarrant } from "@/lib/genlayer/warrant-reader";
+
+export const dynamic = "force-dynamic";
 import { AdjudicateAction } from "@/components/AdjudicateAction";
 
 type WarrantStatus = "PENDING" | "WARRANTED" | "CONDITIONAL" | "NOT_WARRANTED" | "INCONCLUSIVE" | "PENDING_AI";
@@ -18,7 +21,7 @@ interface WarrantData {
 
 const STATUS_CONFIG: Record<string, { label: string; textClass: string; bgClass: string; borderClass: string }> = {
   PENDING: {
-    label: "PENDING (DRAFT)",
+    label: "PENDING EVIDENCE VALIDATION",
     textClass: "text-[#4A5568]",
     bgClass: "bg-[#E2E8F0]",
     borderClass: "border-[#4A5568]/20"
@@ -55,72 +58,20 @@ const STATUS_CONFIG: Record<string, { label: string; textClass: string; bgClass:
   }
 };
 
-export default async function WarrantPage({ params }: { params: { id: string } | Promise<{ id: string }> }) {
-  // Support both sync and async params resolving for Next.js 15+
-  const resolvedParams = await Promise.resolve(params);
+export default async function WarrantPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = await params;
   
   let data: WarrantData | null = null;
   let errorMsg = null;
-  const isDemo = resolvedParams.id.startsWith("demo");
-
-  if (isDemo) {
-    if (resolvedParams.id === "demo-low") {
-      data = {
-        id: "wd_a7b93c8",
-        status: "WARRANTED",
-        evidenceUrl: "https://example.com/api/v1/auth/session/token/validate",
-        evidenceHash: "0x8f4b2c1e9d3a7f6c5b4e1d2a3f9c8b7a6d5e4f3c2b1a0d9e8f7c6b5a4d3c2b1a",
-        intendedAction: "Read user profile",
-        riskLevel: "LOW",
-        requester: "0x2B01a6d4731d1603269B4ffB686522a3ED9D5f3e",
-        timestamp: "2024-05-18T10:43:21Z",
-        reason: "The evidence clearly authorizes reading the user profile."
-      };
-    } else {
-      data = {
-        id: "wd_7f9c21a",
-        status: "NOT_WARRANTED",
-        evidenceUrl: "https://example.com/api/v1/auth/session/token/validate",
-        evidenceHash: "0x8f4b2c1e9d3a7f6c5b4e1d2a3f9c8b7a6d5e4f3c2b1a0d9e8f7c6b5a4d3c2b1a",
-        intendedAction: "Execute $10,000 wire transfer",
-        riskLevel: "HIGH",
-        requester: "0x2B01a6d4731d1603269B4ffB686522a3ED9D5f3e",
-        timestamp: "2024-05-18T10:45:03Z",
-        reason: "The token validates identity, but does not provide sufficient authorization for a high-value wire transfer."
-      };
-    }
-  } else {
-    try {
-      const client = createClient({ chain: chains.studionet });
-      const contractAddress = process.env.NEXT_PUBLIC_PROOFDATA_CONTRACT_ADDRESS as `0x${string}`;
-      
-      const result = await client.readContract({
-        address: contractAddress,
-        functionName: 'get_warrant',
-        args: [resolvedParams.id]
-      });
-
-      if (result && typeof result === 'object' && 'status' in result) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const w = result as any;
-        data = {
-          id: w.id || resolvedParams.id,
-          status: w.status as WarrantStatus,
-          evidenceUrl: w.evidence_ref || "Unknown",
-          evidenceHash: w.expected_hash || "Unknown",
-          intendedAction: w.purpose || "Unknown",
-          riskLevel: w.risk_level || "Unknown",
-          requester: w.requester || "Unknown",
-          timestamp: new Date().toISOString(), // Fallback
-          reason: w.reason || "No explicit reason was returned."
-        };
-      } else {
-        errorMsg = "Warrant found, but format is invalid.";
-      }
-    } catch (e: unknown) {
-      errorMsg = "Not found on GenLayer network.";
-      console.warn("Warrant read failed:", e);
-    }
+  const warrantId = resolvedParams.id === "demo-low" ? FINAL_PROOF.lowWarrantId : resolvedParams.id.startsWith("demo") ? FINAL_PROOF.highWarrantId : resolvedParams.id;
+  try {
+    const w = await readWarrant(warrantId);
+    data = { id: w.id, status: w.status as WarrantStatus, evidenceUrl: w.evidence_ref,
+      evidenceHash: w.expected_hash, intendedAction: w.purpose, riskLevel: w.risk_level,
+      requester: w.requester, timestamp: String(w.expires_at),
+      reason: "This contract stores the verdict only; it does not store the adjudication reason." };
+  } catch {
+    errorMsg = "Unable to read this warrant from Bradbury. It may not exist, or the network may be unavailable.";
   }
 
   if (errorMsg || !data) {
@@ -129,7 +80,7 @@ export default async function WarrantPage({ params }: { params: { id: string } |
         <h1 className="text-4xl font-bold text-red-500 mb-4">{errorMsg || "UNKNOWN ERROR"}</h1>
         <p className="text-text-secondary">Unable to load reliance warrant: {resolvedParams.id}</p>
         <div className="mt-8">
-          <Link href="/warrant/demo" className="text-brand hover:underline mr-4">View High Risk Demo</Link>
+          <Link href="/warrant/demo" className="text-brand hover:underline mr-4">View Final HIGH Proof</Link>
         </div>
       </div>
     );
@@ -190,7 +141,7 @@ export default async function WarrantPage({ params }: { params: { id: string } |
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-[#4A5568]"></span>
               </span>
               <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#4A5568]">
-                {data.status === "PENDING_AI" ? "Awaiting Adjudication" : "GenVM Processing"}
+                {data.status === "PENDING_AI" ? "Awaiting Adjudication" : "Evidence Validation Required"}
               </span>
             </div>
           )}
@@ -224,7 +175,7 @@ export default async function WarrantPage({ params }: { params: { id: string } |
                   <a href={data.evidenceUrl} className="text-sm text-[#2B5CFF] hover:underline break-all block">{data.evidenceUrl}</a>
                 </div>
                 <div>
-                  <div className="text-[10px] text-[#4A5568] font-mono mb-2 uppercase tracking-widest font-bold">Fingerprint (SHA-256)</div>
+                  <div className="text-[10px] text-[#4A5568] font-mono mb-2 uppercase tracking-widest font-bold">Fingerprint (Keccak-256)</div>
                   <div className="text-base sm:text-lg font-mono break-all bg-[#0A0E17] text-white p-4 border border-[#0A0E17]/10 flex items-center gap-3 shadow-md">
                     <svg className="w-5 h-5 text-[#2B5CFF] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" /></svg>
                     {data.evidenceHash}
@@ -233,8 +184,8 @@ export default async function WarrantPage({ params }: { params: { id: string } |
               </div>
             </section>
             
-            {data.status === "PENDING_AI" && !isDemo && (
-              <AdjudicateAction warrantId={data.id} />
+            {["PENDING", "PENDING_AI"].includes(data.status) && (
+              <AdjudicateAction key={data.status} warrantId={data.id} method={data.status === "PENDING" ? "retrieve_and_validate" : "adjudicate"} />
             )}
             
           </div>
@@ -245,12 +196,6 @@ export default async function WarrantPage({ params }: { params: { id: string } |
               <div className="text-sm font-bold tracking-wider">{data.riskLevel}</div>
             </div>
             
-            {isDemo && (
-              <div>
-                <h2 className="text-[10px] uppercase tracking-[0.2em] text-[#4A5568] mb-2 font-semibold">Timestamp</h2>
-                <div className="text-xs font-mono">{new Date(data.timestamp).toLocaleString()}</div>
-              </div>
-            )}
 
             <div>
               <h2 className="text-[10px] uppercase tracking-[0.2em] text-[#4A5568] mb-2 font-semibold">Requester</h2>
@@ -259,17 +204,17 @@ export default async function WarrantPage({ params }: { params: { id: string } |
 
             <div>
               <h2 className="text-[10px] uppercase tracking-[0.2em] text-[#4A5568] mb-2 font-semibold">Protocol</h2>
-              <div className="text-xs font-mono">GenLayer (Studionet)</div>
+              <div className="text-xs font-mono">GenLayer (Bradbury, chain 4221)</div>
             </div>
           </div>
         </div>
       </div>
       
       <div className="mt-12 flex flex-col md:flex-row gap-4 md:gap-8 justify-center items-center text-[10px] font-mono tracking-widest text-text-secondary relative z-10">
-        <Link href="/warrant/warrant-cb5653e5-76f4-4dcd-9ae4-d22f81786fea" className="hover:text-white transition-colors border border-[#4A5568]/50 px-4 py-2">LOAD P3 FIXTURE (ADJUDICATE)</Link>
+        <Link href={`/warrant/${FINAL_PROOF.lowWarrantId}`} className="hover:text-white transition-colors border border-[#4A5568]/50 px-4 py-2">FINAL LOW PROOF</Link>
         <div className="flex gap-4">
-          <Link href="/warrant/demo-low" className="hover:text-white transition-colors">DEMO: LOW</Link>
-          <Link href="/warrant/demo" className="hover:text-white transition-colors">DEMO: HIGH</Link>
+          <Link href="/warrant/demo-low" className="hover:text-white transition-colors">LOW PROOF</Link>
+          <Link href="/warrant/demo" className="hover:text-white transition-colors">HIGH PROOF</Link>
         </div>
       </div>
     </div>

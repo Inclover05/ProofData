@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState } from "react";
+import Link from "next/link";
 import { useWallet } from "@/lib/genlayer/useWallet";
-import { transactionTracker, NormalizedLifecycleState } from "@/lib/genlayer/transaction-lifecycle";
-import { checkWarrantStatus } from "@/lib/genlayer/warrant-reader";
+import { transactionTracker } from "@/lib/genlayer/transaction-lifecycle";
+import { useTrackedTransaction } from "@/lib/genlayer/useTrackedTransaction";
+import { FINAL_PROOF } from "@/lib/genlayer/config";
 
 export default function CreateWarrant() {
   const { 
@@ -19,107 +21,21 @@ export default function CreateWarrant() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const [risk, setRisk] = useState('LOW');
-  const [url, setUrl] = useState('https://raw.githubusercontent.com/npm/cli/328f63c72dd3d72d7cdc0ded638cd9c6a41e2f31/LICENSE');
-  const [expectedHash, setExpectedHash] = useState('d31880ae9181571d18323e1817597e4dcc2d5fb312920a662d1696bb9d7ae0ac');
-  const [action, setAction] = useState('Use this evidence for an internal research summary.');
-  const [reqs, setReqs] = useState('');
+  const [risk, setRisk] = useState("LOW");
+  const [url, setUrl] = useState(FINAL_PROOF.sampleEvidence.url);
+  const [expectedHash, setExpectedHash] = useState(FINAL_PROOF.sampleEvidence.keccak);
+  const [action, setAction] = useState("Use this evidence to prepare an internal developer note listing the declared GenLayerJS testnet network exports.");
+  const [reqs, setReqs] = useState("");
 
-  const prefillHighRisk = () => {
-    setUrl('https://raw.githubusercontent.com/npm/cli/328f63c72dd3d72d7cdc0ded638cd9c6a41e2f31/LICENSE');
-    setExpectedHash('d31880ae9181571d18323e1817597e4dcc2d5fb312920a662d1696bb9d7ae0ac');
-    setAction('Use this evidence to authorize an autonomous treasury allocation of significant value.');
-    setRisk('HIGH');
-    setReqs('');
-    invalidateEstimate();
-  };
-  
-  const [txHash, setTxHash] = useState<string | null>(null);
+  const { tracked, info, warrantStatus, startTracking, setInfo } = useTrackedTransaction("create");
+  const txHash = tracked?.txHash || null;
+  const lifecycleState = info.state;
+  const rawStatus = info.rawStatus;
+  const rawExecutionResult = info.rawExecutionResult;
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const trackingError = submitError || info.errorMessage;
   const [showWalletSelector, setShowWalletSelector] = useState(false);
   const [generatedWarrantId] = useState(() => `warrant-${typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now()}`);
-
-  const [lifecycleState, setLifecycleState] = useState<NormalizedLifecycleState>('IDLE');
-  const [rawStatus, setRawStatus] = useState<string | null>(null);
-  const [rawExecutionResult, setRawExecutionResult] = useState<string | null>(null);
-  const [warrantStatus, setWarrantStatus] = useState<string | null>(null);
-
-  const pollingRef = useRef<NodeJS.Timeout | null>(null);
-  const maxPolls = 60; // 5 mins at 5s intervals
-  const pollCount = useRef(0);
-
-  const stopTracking = useCallback(() => {
-    if (pollingRef.current) {
-      clearInterval(pollingRef.current);
-      pollingRef.current = null;
-    }
-  }, []);
-
-  const startTracking = useCallback((hash: string, wId: string) => {
-    stopTracking();
-    setLifecycleState('SUBMITTED');
-    pollCount.current = 0;
-
-    pollingRef.current = setInterval(async () => {
-      pollCount.current += 1;
-      if (pollCount.current > maxPolls) {
-        stopTracking();
-        setLifecycleState('NETWORK_ERROR');
-        setSubmitError('Tracking timed out. The transaction may still be finalizing on the network.');
-        return;
-      }
-
-      const info = await transactionTracker.getTransactionStatus(hash);
-      
-      if (info.state === 'NOT_FOUND') {
-        // Just keep waiting for it to appear
-        setLifecycleState('SUBMITTING');
-      } else {
-        setLifecycleState(info.state);
-        setRawStatus(info.rawStatus || null);
-        setRawExecutionResult(info.rawExecutionResult || null);
-        
-        if (info.errorMessage) {
-          setSubmitError(info.errorMessage);
-        } else {
-          setSubmitError(null);
-        }
-
-        if (transactionTracker.isTerminal(info.state)) {
-          stopTracking();
-          localStorage.removeItem('proofdata_pending_tx');
-          localStorage.removeItem('proofdata_pending_warrant_id');
-          
-          if (info.state === 'FINALIZED_SUCCESS') {
-            const wStatus = await checkWarrantStatus(wId);
-            setWarrantStatus(wStatus);
-          }
-        }
-      }
-    }, 5000);
-  }, [stopTracking]);
-
-  useEffect(() => {
-    // Resume tracking on reload
-    const savedTx = localStorage.getItem('proofdata_pending_tx');
-    const savedId = localStorage.getItem('proofdata_pending_warrant_id');
-    
-    // Use an effect to safely restore without causing set-state-in-effect warning issues that disrupt flow
-    let isMounted = true;
-    if (savedTx && savedId && lifecycleState === 'IDLE') {
-       setTimeout(() => {
-         if (isMounted) {
-           setTxHash(savedTx);
-           startTracking(savedTx, savedId);
-         }
-       }, 0);
-    }
-
-    return () => {
-      isMounted = false;
-      stopTracking();
-    };
-  }, [lifecycleState, startTracking, stopTracking]);
 
   const invalidateEstimate = () => {
     setSubmitError(null);
@@ -158,26 +74,22 @@ export default function CreateWarrant() {
     setSubmitError(null);
     
     try {
-      const contractAddress = process.env.NEXT_PUBLIC_PROOFDATA_CONTRACT_ADDRESS as `0x${string}`;
-      setLifecycleState('SUBMITTING');
+      setInfo({ state: 'SUBMITTING' });
       
-      const result = await writeWarrant(contractAddress, getArgs());
+      const result = await writeWarrant(getArgs());
       
       if (result.error) {
         setSubmitError(`Unable to prepare this transaction: ${result.error}`);
-        setLifecycleState('IDLE');
+        setInfo({ state: 'IDLE' });
         if (result.rawError) {
           console.error("Technical details:", result.rawError);
         }
       } else if (result.txHash) {
-        setTxHash(result.txHash);
-        localStorage.setItem('proofdata_pending_tx', result.txHash);
-        localStorage.setItem('proofdata_pending_warrant_id', generatedWarrantId);
-        startTracking(result.txHash, generatedWarrantId);
+        startTracking({ txHash: result.txHash, outerTxHash: result.outerTxHash, warrantId: generatedWarrantId });
       }
     } catch (err: unknown) {
       setSubmitError("Unable to prepare this transaction.");
-      setLifecycleState('IDLE');
+      setInfo({ state: 'IDLE' });
       console.error("Technical details:", err);
     } finally {
       setIsSubmitting(false);
@@ -196,7 +108,7 @@ export default function CreateWarrant() {
         <div className="space-y-4 font-mono text-sm mb-8">
           <div className="flex items-center gap-4">
             <div className={`w-3 h-3 rounded-full ${lifecycleState === 'SUBMITTING' ? 'bg-accent animate-pulse' : 'bg-green-500'}`}></div>
-            <div className={lifecycleState === 'SUBMITTING' ? 'text-white' : 'text-text-secondary'}>Submitted</div>
+            <div className={lifecycleState === 'SUBMITTING' ? 'text-white' : 'text-text-secondary'}>{lifecycleState === "SUBMITTING" ? "Awaiting wallet authorization / submission" : "Submitted"}</div>
           </div>
           
           <div className="flex items-center gap-4">
@@ -214,7 +126,7 @@ export default function CreateWarrant() {
             <div className={!isTerminal ? 'text-text-secondary/50' : 'text-white'}>
               {lifecycleState === 'FINALIZED_SUCCESS' ? 'Finalized - Execution Verified' : 
                lifecycleState === 'FINALIZED_ERROR' ? 'Finalized - Execution Failed' : 
-               lifecycleState === 'FAILED' ? 'Transaction Failed/Canceled' :
+               ['FAILED', 'CANCELED'].includes(lifecycleState) ? 'Transaction Failed/Canceled' :
                lifecycleState === 'NETWORK_ERROR' ? 'Network Tracking Error' :
                'Finalized'}
             </div>
@@ -222,25 +134,27 @@ export default function CreateWarrant() {
         </div>
 
         <div className="bg-bg-deep-graphite p-5 border border-rules text-xs font-mono text-text-secondary space-y-2">
-          <div className="break-all"><span className="text-white">Transaction Hash:</span> {txHash}</div>
+          <div className="break-all"><span className="text-white">GenLayer transaction:</span> {txHash}</div>
+          <div className="break-all"><span className="text-white">Outer EVM transaction:</span> {tracked?.outerTxHash || "Not available"}</div>
           <div><span className="text-white">Protocol Status:</span> {rawStatus || 'WAITING'}</div>
           <div><span className="text-white">Execution Result:</span> {rawExecutionResult || 'WAITING'}</div>
         </div>
 
-        {submitError && (
+        {trackingError && (
           <div className="mt-6 p-4 border border-[#800010]/20 bg-[#FEE7EA] text-[#800010] text-sm font-mono">
-            {submitError}
+            {trackingError}
             {!isTerminal && (
-               <button onClick={() => startTracking(txHash!, localStorage.getItem('proofdata_pending_warrant_id')!)} className="block mt-2 underline">Retry Status Check</button>
+               <button onClick={() => startTracking(tracked!)} className="block mt-2 underline">Retry Status Check</button>
             )}
           </div>
         )}
 
         {warrantStatus && (
           <div className="mt-8 p-6 bg-surface-ivory text-text-dark border border-rules-light">
-            <div className="text-[10px] uppercase tracking-widest text-text-dark-secondary mb-2">Semantic Verdict</div>
+            <div className="text-[10px] uppercase tracking-widest text-text-dark-secondary mb-2">Authoritative Contract State</div>
             <div className="text-lg font-medium">{warrantStatus}</div>
-            <div className="text-xs text-text-dark-secondary mt-2">The semantic adjudication phase is currently evaluating the evidence. Additional read/adjudication integration will be required in later milestones to display full verdict rationale.</div>
+            <div className="text-xs text-text-dark-secondary mt-2">Continue to the warrant to retrieve evidence and request adjudication. GenLayer finalization may take several minutes.</div>
+            <Link href={`/warrant/${tracked?.warrantId}`} className="mt-4 block font-mono text-sm text-accent underline">CONTINUE TO WARRANT</Link>
           </div>
         )}
       </div>
@@ -282,7 +196,7 @@ export default function CreateWarrant() {
                         className="w-full text-left px-4 py-3 text-sm text-white hover:bg-bg-cool-slate flex items-center gap-3 transition-colors"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={p.info.icon} alt={p.info.name} className="w-5 h-5" />
+                        <img src={p.info.icon} alt="" className="w-5 h-5" />
                         {p.info.name}
                       </button>
                     ))}
@@ -325,19 +239,10 @@ export default function CreateWarrant() {
         {txHash ? renderLifecycleUI() : (
           <form onSubmit={handleSubmit} className="space-y-8">
             
-            <div className="flex justify-end mb-4">
-              <button 
-                type="button" 
-                onClick={prefillHighRisk}
-                className="text-xs font-mono tracking-widest text-[#2B5CFF] hover:text-white border border-[#2B5CFF] hover:bg-[#2B5CFF] px-4 py-2 transition-colors"
-              >
-                AUTO-FILL P6 HIGH-RISK TEST
-              </button>
-            </div>
 
             {submitError && (
               <div className="p-4 border border-[#800010]/20 bg-[#FEE7EA] text-[#800010] text-sm font-mono">
-                {submitError}
+                {trackingError}
               </div>
             )}
 
@@ -468,7 +373,7 @@ export default function CreateWarrant() {
                 disabled={isSubmitting || !url || !action}
                 className="group relative px-12 py-5 bg-accent text-white font-mono tracking-widest uppercase text-sm transition-all hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed border border-accent"
               >
-                {isSubmitting ? 'PREPARING...' : 'ISSUE RELIANCE WARRANT'}
+                {isSubmitting ? 'AWAITING WALLET / SUBMITTING...' : 'ISSUE RELIANCE WARRANT'}
               </button>
             </div>
           </form>

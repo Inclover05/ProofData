@@ -1,221 +1,97 @@
 "use client";
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { createClient, chains } from 'genlayer-js';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { createClient } from "genlayer-js";
+import { PROOFDATA_CHAIN, PROOFDATA_CONTRACT } from "./config.ts";
+import { BrowserProvider, ensureBradburyNetwork, selectWalletProvider, withBradburyGasHeadroom, walletErrorMessage } from "./browser-provider.ts";
 
-declare global {
-  interface Window {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ethereum?: any;
-    dispatchEvent: (event: Event) => boolean;
-  }
-}
-
-export interface EIP6963ProviderInfo {
-  uuid: string;
-  name: string;
-  icon: string;
-  rdns: string;
-}
-
-export interface EIP6963ProviderDetail {
-  info: EIP6963ProviderInfo;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  provider: any;
-}
+declare global { interface Window { ethereum?: BrowserProvider; } }
+export interface EIP6963ProviderInfo { uuid: string; name: string; icon: string; rdns: string; }
+export interface EIP6963ProviderDetail { info: EIP6963ProviderInfo; provider: BrowserProvider; }
+export type WarrantWriteMethod = "create_warrant" | "retrieve_and_validate" | "adjudicate";
+export interface WalletWriteResult { txHash?: string; outerTxHash?: string; error?: string; rawError?: Error; }
 
 export function useWallet() {
   const [address, setAddress] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [network, setNetwork] = useState<string | null>(null);
-  
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [client, setClient] = useState<any>(null);
+  const [client, setClient] = useState<ReturnType<typeof createClient> | null>(null);
   const [providers, setProviders] = useState<EIP6963ProviderDetail[]>([]);
   const [selectedProviderDetail, setSelectedProviderDetail] = useState<EIP6963ProviderDetail | null>(null);
-
-  const hasLegacyEthereum = typeof window !== 'undefined' && !!window.ethereum;
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const activeProviderRef = useRef<any>(null);
+  const [activeProvider, setActiveProvider] = useState<BrowserProvider | null>(null);
+  const outerHashRef = useRef<string | undefined>(undefined);
+  const hasLegacyEthereum = typeof window !== "undefined" && !!window.ethereum;
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const onAnnounceProvider = (event: any) => {
-      const detail = event.detail as EIP6963ProviderDetail;
-      if (detail && detail.info && detail.provider) {
-        setProviders(prev => {
-          if (prev.some(p => p.info.uuid === detail.info.uuid)) return prev;
-          return [...prev, detail];
-        });
+    const announce = (event: Event) => {
+      const detail = (event as CustomEvent<EIP6963ProviderDetail>).detail;
+      if (detail?.info?.uuid && typeof detail.provider?.request === "function") {
+        setProviders(previous => previous.some(p => p.info.uuid === detail.info.uuid) ? previous : [...previous, detail]);
       }
     };
-
-    window.addEventListener('eip6963:announceProvider', onAnnounceProvider);
-    window.dispatchEvent(new Event('eip6963:requestProvider'));
-
-    return () => {
-      window.removeEventListener('eip6963:announceProvider', onAnnounceProvider);
-    };
+    window.addEventListener("eip6963:announceProvider", announce);
+    window.dispatchEvent(new Event("eip6963:requestProvider"));
+    return () => window.removeEventListener("eip6963:announceProvider", announce);
   }, []);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const setupClientWithProvider = useCallback(async (accountAddress: string, provider: any) => {
+  const setupClientWithProvider = useCallback((accountAddress: string, provider: BrowserProvider) => {
+    const adapted = withBradburyGasHeadroom(provider, hash => { outerHashRef.current = hash; });
+    const newClient = createClient({ chain: PROOFDATA_CHAIN, account: accountAddress as `0x${string}`, provider: adapted });
     setAddress(accountAddress);
-    try {
-      const newClient = createClient({
-        chain: chains.studionet,
-        account: accountAddress as `0x${string}`,
-        provider
-      });
-      setClient(newClient);
-      setNetwork('STUDIONET'); 
-    } catch (err: unknown) {
-      setError((err as Error).message || 'Failed to setup client');
-    }
+    setClient(newClient);
+    return newClient;
   }, []);
 
   useEffect(() => {
-    if (!activeProviderRef.current) return;
-    const provider = activeProviderRef.current;
-
-    const handleAccountsChanged = (accounts: string[]) => {
-      if (accounts.length > 0) {
-        setupClientWithProvider(accounts[0], provider);
-      } else {
-        setAddress(null);
-        setClient(null);
-        setNetwork(null);
-      }
+    if (!activeProvider) return;
+    const accountsChanged = (...args: unknown[]) => {
+      const accounts = args[0];
+      if (Array.isArray(accounts) && typeof accounts[0] === "string") setupClientWithProvider(accounts[0], activeProvider);
+      else { setAddress(null); setClient(null); setNetwork(null); }
     };
-
-    const handleChainChanged = () => {
-      window.location.reload();
+    const chainChanged = (...args: unknown[]) => {
+      setNetwork(String(args[0]).toLowerCase() === "0x107d" ? "BRADBURY (4221)" : "WRONG NETWORK — SWITCH TO BRADBURY");
     };
-
-    const handleDisconnect = () => {
-      setAddress(null);
-      setClient(null);
-      setNetwork(null);
-    };
-
-    if (provider.on) {
-      provider.on('accountsChanged', handleAccountsChanged);
-      provider.on('chainChanged', handleChainChanged);
-      provider.on('disconnect', handleDisconnect);
-    }
-
+    const disconnect = () => { setAddress(null); setClient(null); setNetwork(null); };
+    activeProvider.on?.("accountsChanged", accountsChanged);
+    activeProvider.on?.("chainChanged", chainChanged);
+    activeProvider.on?.("disconnect", disconnect);
     return () => {
-      if (provider.removeListener) {
-        provider.removeListener('accountsChanged', handleAccountsChanged);
-        provider.removeListener('chainChanged', handleChainChanged);
-        provider.removeListener('disconnect', handleDisconnect);
-      }
+      activeProvider.removeListener?.("accountsChanged", accountsChanged);
+      activeProvider.removeListener?.("chainChanged", chainChanged);
+      activeProvider.removeListener?.("disconnect", disconnect);
     };
-  }, [selectedProviderDetail, setupClientWithProvider]);
+  }, [activeProvider, setupClientWithProvider]);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const ensureNetwork = async (provider: any) => {
-    const targetChainId = `0x${chains.studionet.id.toString(16)}`;
-    try {
-      const currentChainId = await provider.request({ method: 'eth_chainId' });
-      if (currentChainId !== targetChainId) {
-        try {
-          await provider.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId: targetChainId }],
-          });
-        } catch (switchError: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-          if (switchError.code === 4902) {
-            await provider.request({
-              method: 'wallet_addEthereumChain',
-              params: [
-                {
-                  chainId: targetChainId,
-                  chainName: chains.studionet.name,
-                  rpcUrls: chains.studionet.rpcUrls.default.http,
-                  nativeCurrency: chains.studionet.nativeCurrency,
-                },
-              ],
-            });
-          } else {
-            throw switchError;
-          }
-        }
-      }
-    } catch (err: unknown) {
-      console.warn("Failed to switch/add network. Wallet might not support it natively.", err);
-      throw new Error("This wallet does not support the network/signing method required by ProofData.");
-    }
-  };
-
-  const connectToProvider = async (providerDetail: EIP6963ProviderDetail | null) => {
+  const connectToProvider = async (detail: EIP6963ProviderDetail | null) => {
     setIsConnecting(true);
     setError(null);
     try {
-      const provider = providerDetail ? providerDetail.provider : window.ethereum;
-      if (!provider) {
-        throw new Error('No provider available.');
-      }
-      
-      activeProviderRef.current = provider;
-      setSelectedProviderDetail(providerDetail);
-
-      await ensureNetwork(provider);
-
-      const accounts = await provider.request({ method: 'eth_requestAccounts' });
-      if (accounts.length > 0) {
-        await setupClientWithProvider(accounts[0], provider);
-      }
-    } catch (err: unknown) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if ((err as any).code === 4001) {
-        setError('Transaction was not signed.'); 
-      } else {
-        setError((err as Error).message || 'Failed to connect');
-      }
-    } finally {
-      setIsConnecting(false);
-    }
+      const provider = selectWalletProvider(detail?.provider, window.ethereum);
+      if (!provider) throw new Error("No compatible browser wallet detected.");
+      setSelectedProviderDetail(detail);
+      setActiveProvider(provider);
+      const accounts = await provider.request({ method: "eth_requestAccounts" });
+      if (!Array.isArray(accounts) || typeof accounts[0] !== "string") throw new Error("No wallet account was authorized.");
+      await ensureBradburyNetwork(provider);
+      setupClientWithProvider(accounts[0], provider);
+      setNetwork("BRADBURY (4221)");
+    } catch (err) { setError(walletErrorMessage(err)); }
+    finally { setIsConnecting(false); }
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const writeWarrant = async (contractAddress: string, args: any[]): Promise<{ txHash?: string, error?: string, rawError?: Error }> => {
-    if (!client) return { error: 'Wallet not connected' };
+  const writeContract = async (functionName: WarrantWriteMethod, args: NonNullable<Parameters<NonNullable<typeof client>["writeContract"]>[0]["args"]>): Promise<WalletWriteResult> => {
+    if (!address || !activeProvider || !client) return { error: "Wallet not connected." };
+    outerHashRef.current = undefined;
     try {
-      const txHash = await client.writeContract({
-        address: contractAddress,
-        functionName: 'create_warrant',
-        args,
-        value: BigInt(0),
-      });
-      return { txHash };
-    } catch (err: unknown) {
-      const msg = (err as Error).message || '';
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const code = (err as any).code;
-      if (msg.includes('User rejected') || code === 4001) {
-        return { error: 'Transaction was not signed.', rawError: err as Error };
-      }
-      if (msg.includes('wrong chain') || msg.includes('network')) {
-        return { error: 'Wrong network. Switch to Studionet.', rawError: err as Error };
-      }
-      return { error: msg || 'Transaction failed', rawError: err as Error };
-    }
+      await ensureBradburyNetwork(activeProvider);
+      setNetwork("BRADBURY (4221)");
+      const txHash: unknown = await client.writeContract({ address: PROOFDATA_CONTRACT, functionName, args, value: BigInt(0) });
+      if (typeof txHash !== "string" || !/^0x[0-9a-f]{64}$/i.test(txHash)) throw new Error("Bradbury did not return a valid GenLayer transaction identifier.");
+      return { txHash, outerTxHash: outerHashRef.current };
+    } catch (err) { return { error: walletErrorMessage(err), outerTxHash: outerHashRef.current, rawError: err instanceof Error ? err : undefined }; }
   };
 
-  return {
-    address,
-    isConnecting,
-    error,
-    network,
-    providers,
-    hasLegacyEthereum,
-    selectedProviderDetail,
-    connectToProvider,
-    writeWarrant,
-    client,
-  };
+  const writeWarrant = (args: Parameters<typeof writeContract>[1]) => writeContract("create_warrant", args);
+  return { address, isConnecting, error, network, providers, hasLegacyEthereum, selectedProviderDetail, connectToProvider, writeWarrant, writeContract, client };
 }

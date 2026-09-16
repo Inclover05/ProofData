@@ -1,14 +1,17 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState } from "react";
 import { useWallet } from "@/lib/genlayer/useWallet";
-import { transactionTracker, NormalizedLifecycleState } from "@/lib/genlayer/transaction-lifecycle";
+import { transactionTracker } from "@/lib/genlayer/transaction-lifecycle";
+
+import { useTrackedTransaction } from "@/lib/genlayer/useTrackedTransaction";
 
 interface AdjudicateActionProps {
   warrantId: string;
+  method: "retrieve_and_validate" | "adjudicate";
 }
 
-export function AdjudicateAction({ warrantId }: AdjudicateActionProps) {
+export function AdjudicateAction({ warrantId, method }: AdjudicateActionProps) {
   const { 
     address, 
     isConnecting, 
@@ -16,89 +19,19 @@ export function AdjudicateAction({ warrantId }: AdjudicateActionProps) {
     providers,
     hasLegacyEthereum,
     connectToProvider, 
-    client
+    writeContract
   } = useWallet();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [txHash, setTxHash] = useState<string | null>(null);
+  const { tracked, info, startTracking, setInfo, warrantStatus } = useTrackedTransaction(`${method}:${warrantId}`);
+  const txHash = tracked?.txHash || null;
+  const lifecycleState = info.state;
+  const rawStatus = info.rawStatus;
+  const rawExecutionResult = info.rawExecutionResult;
+  const needsReload = lifecycleState === "FINALIZED_SUCCESS";
+  const isRetrieval = method === "retrieve_and_validate";
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [showWalletSelector, setShowWalletSelector] = useState(false);
-
-  const [lifecycleState, setLifecycleState] = useState<NormalizedLifecycleState>('IDLE');
-  const [rawStatus, setRawStatus] = useState<string | null>(null);
-  const [rawExecutionResult, setRawExecutionResult] = useState<string | null>(null);
-  const [needsReload, setNeedsReload] = useState(false);
-
-  const pollingRef = useRef<NodeJS.Timeout | null>(null);
-  const maxPolls = 60; // 5 mins
-  const pollCount = useRef(0);
-
-  const stopTracking = useCallback(() => {
-    if (pollingRef.current) {
-      clearInterval(pollingRef.current);
-      pollingRef.current = null;
-    }
-  }, []);
-
-  const startTracking = useCallback((hash: string) => {
-    stopTracking();
-    setLifecycleState('SUBMITTED');
-    pollCount.current = 0;
-
-    pollingRef.current = setInterval(async () => {
-      pollCount.current += 1;
-      if (pollCount.current > maxPolls) {
-        stopTracking();
-        setLifecycleState('NETWORK_ERROR');
-        setSubmitError('Tracking timed out. The transaction may still be finalizing on the network.');
-        return;
-      }
-
-      const info = await transactionTracker.getTransactionStatus(hash);
-      
-      if (info.state === 'NOT_FOUND') {
-        setLifecycleState('SUBMITTING');
-      } else {
-        setLifecycleState(info.state);
-        setRawStatus(info.rawStatus || null);
-        setRawExecutionResult(info.rawExecutionResult || null);
-        
-        if (info.errorMessage) {
-          setSubmitError(info.errorMessage);
-        } else {
-          setSubmitError(null);
-        }
-
-        if (transactionTracker.isTerminal(info.state)) {
-          stopTracking();
-          localStorage.removeItem(`proofdata_adj_tx_${warrantId}`);
-          
-          if (info.state === 'FINALIZED_SUCCESS') {
-            setNeedsReload(true);
-          }
-        }
-      }
-    }, 5000);
-  }, [stopTracking, warrantId]);
-
-  useEffect(() => {
-    const savedTx = localStorage.getItem(`proofdata_adj_tx_${warrantId}`);
-    
-    let isMounted = true;
-    if (savedTx && lifecycleState === 'IDLE') {
-       setTimeout(() => {
-         if (isMounted) {
-           setTxHash(savedTx);
-           startTracking(savedTx);
-         }
-       }, 0);
-    }
-
-    return () => {
-      isMounted = false;
-      stopTracking();
-    };
-  }, [lifecycleState, startTracking, stopTracking, warrantId]);
 
   const handleConnectClick = () => {
     if (providers.length > 1) {
@@ -118,52 +51,25 @@ export function AdjudicateAction({ warrantId }: AdjudicateActionProps) {
       return;
     }
     
-    if (!client) {
-      setSubmitError("Wallet client not initialized.");
-      return;
-    }
-
     setIsSubmitting(true);
     setSubmitError(null);
     
     try {
-      const contractAddress = process.env.NEXT_PUBLIC_PROOFDATA_CONTRACT_ADDRESS as `0x${string}`;
-      setLifecycleState('SUBMITTING');
-      
-      const hash = await client.writeContract({
-        address: contractAddress,
-        functionName: "adjudicate",
-        args: [warrantId],
-      });
-      
-      setTxHash(hash);
-      localStorage.setItem(`proofdata_adj_tx_${warrantId}`, hash);
-      startTracking(hash);
+      setInfo({ state: "SUBMITTING" });
+      const result = await writeContract(method, isRetrieval ? [warrantId, 0] : [warrantId]);
+      if (result.error || !result.txHash) throw new Error(result.error || "No GenLayer transaction was created.");
+      startTracking({ txHash: result.txHash, outerTxHash: result.outerTxHash, warrantId });
     } catch (err: unknown) {
       setSubmitError(`Unable to prepare this transaction: ${(err as Error).message}`);
-      setLifecycleState('IDLE');
+      setInfo({ state: 'IDLE' });
       console.error("Technical details:", err);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (needsReload) {
-    return (
-      <div className="mt-12 p-6 bg-[#EBF4FF] border border-[#2B5CFF] text-[#0A0E17] text-center">
-        <h3 className="font-bold text-lg mb-2">Adjudication Complete</h3>
-        <p className="text-sm mb-4">The semantic verdict has been successfully finalized.</p>
-        <button 
-          onClick={() => window.location.reload()} 
-          className="bg-[#2B5CFF] text-white px-6 py-2 text-sm font-mono tracking-widest uppercase hover:bg-blue-600 transition-colors"
-        >
-          View Verdict
-        </button>
-      </div>
-    );
-  }
-
   const isTerminal = transactionTracker.isTerminal(lifecycleState);
+  const trackingError = submitError || info.errorMessage;
 
   // Derive visual states cleanly
   const submittedComplete = ['SUBMITTED', 'PROCESSING', 'DECIDED', 'FINALIZED_SUCCESS', 'FINALIZED_ERROR'].includes(lifecycleState);
@@ -176,12 +82,12 @@ export function AdjudicateAction({ warrantId }: AdjudicateActionProps) {
   const decisionActive = lifecycleState === 'DECIDED';
 
   const finalizedSuccess = lifecycleState === 'FINALIZED_SUCCESS';
-  const finalizedError = lifecycleState === 'FINALIZED_ERROR' || lifecycleState === 'FAILED';
+  const finalizedError = ['FINALIZED_ERROR', 'FAILED', 'CANCELED'].includes(lifecycleState);
 
   return (
     <div className="mt-12 p-8 border border-rules-light bg-surface-pale-gray">
       <h3 className="text-xs uppercase tracking-widest font-mono text-text-dark-secondary mb-6 border-b border-rules-light pb-2">
-        Semantic Adjudication
+        {isRetrieval ? "Evidence Retrieval / Hash Validation" : "Semantic Adjudication"}
       </h3>
 
       {walletError && (
@@ -190,11 +96,11 @@ export function AdjudicateAction({ warrantId }: AdjudicateActionProps) {
         </div>
       )}
 
-      {submitError && (
+      {trackingError && (
         <div className="mb-4 p-4 border border-[#800010]/20 bg-[#FEE7EA] text-[#800010] text-xs font-mono">
-          {submitError}
+          {trackingError}
           {!isTerminal && txHash && (
-             <button onClick={() => startTracking(txHash)} className="block mt-2 underline">Retry Status Check</button>
+             <button onClick={() => startTracking(tracked!)} className="block mt-2 underline">Retry Status Check</button>
           )}
         </div>
       )}
@@ -206,7 +112,7 @@ export function AdjudicateAction({ warrantId }: AdjudicateActionProps) {
             disabled={isSubmitting || (isConnecting && !address)}
             className="w-full bg-[#0A0E17] text-white py-4 font-mono text-sm tracking-widest uppercase hover:bg-black transition-colors disabled:opacity-50"
           >
-            {isSubmitting ? "PREPARING..." : !address ? "CONNECT WALLET TO ADJUDICATE" : "ADJUDICATE WARRANT"}
+            {isSubmitting ? "AWAITING WALLET / SUBMITTING..." : !address ? "CONNECT WALLET TO CONTINUE" : isRetrieval ? "RETRIEVE AND VALIDATE EVIDENCE" : "ADJUDICATE WARRANT"}
           </button>
 
           {showWalletSelector && !address && (
@@ -222,7 +128,7 @@ export function AdjudicateAction({ warrantId }: AdjudicateActionProps) {
                   className="w-full text-left px-4 py-3 text-sm text-text-dark hover:bg-surface-pale-gray flex items-center gap-3 transition-colors"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={p.info.icon} alt={p.info.name} className="w-5 h-5" />
+                  <img src={p.info.icon} alt="" className="w-5 h-5" />
                   {p.info.name}
                 </button>
               ))}
@@ -233,7 +139,7 @@ export function AdjudicateAction({ warrantId }: AdjudicateActionProps) {
         <div className="space-y-4 font-mono text-sm">
           <div className="flex items-center gap-4">
             <div className={`w-3 h-3 rounded-full ${submittedActive ? 'bg-[#2B5CFF] animate-pulse' : submittedComplete ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-            <div className={submittedActive ? 'text-text-dark' : submittedComplete ? 'text-text-dark-secondary' : 'text-text-dark-secondary/50'}>Submitted</div>
+            <div className={submittedActive ? 'text-text-dark' : submittedComplete ? 'text-text-dark-secondary' : 'text-text-dark-secondary/50'}>{submittedActive ? "Awaiting wallet authorization / submission" : "Submitted"}</div>
           </div>
           <div className="flex items-center gap-4">
             <div className={`w-3 h-3 rounded-full ${processingActive ? 'bg-[#2B5CFF] animate-pulse' : processingComplete ? 'bg-green-500' : 'bg-gray-300'}`}></div>
@@ -253,8 +159,12 @@ export function AdjudicateAction({ warrantId }: AdjudicateActionProps) {
             </div>
           </div>
           
+          {warrantStatus && <div>Authoritative contract state: {warrantStatus}</div>}
+          {(lifecycleState === "DECIDED" || needsReload) && <button onClick={() => window.location.reload()} className="text-accent underline">{needsReload ? "Read finalized contract state" : "Read contract state — protocol finalization pending"}</button>}
           <div className="bg-white p-4 border border-rules-light text-xs font-mono text-text-dark-secondary mt-4 space-y-2">
-            <div className="break-all"><span className="text-text-dark font-semibold">Tx Hash:</span> {txHash}</div>
+            <div className="break-all"><span className="text-text-dark font-semibold">GenLayer transaction:</span> {txHash}</div>
+            <div className="break-all"><span className="text-text-dark font-semibold">Outer EVM transaction:</span> {tracked?.outerTxHash || "Not available"}</div>
+            <div><span className="text-text-dark font-semibold">Consensus:</span> {info.consensus || "WAITING"}</div>
             <div><span className="text-text-dark font-semibold">Status:</span> {rawStatus || 'WAITING'}</div>
             <div><span className="text-text-dark font-semibold">Execution:</span> {rawExecutionResult || 'WAITING'}</div>
           </div>

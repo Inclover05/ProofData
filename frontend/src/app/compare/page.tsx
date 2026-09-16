@@ -1,65 +1,35 @@
 import Link from "next/link";
-import { createClient, chains } from "genlayer-js";
+import { FINAL_PROOF } from "@/lib/genlayer/config";
+import { readWarrant } from "@/lib/genlayer/warrant-reader";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export default async function ComparePage(props: any) {
-  // Support both async and sync searchParams
-  const searchParams = await Promise.resolve(props.searchParams || {});
+export const dynamic = "force-dynamic";
 
-  const leftId = searchParams.left || 'warrant-cb5653e5-76f4-4dcd-9ae4-d22f81786fea';
-  const rightId = searchParams.right || 'warrant-c955c636-7f66-4350-89b9-932f4ecd1451';
-
-  const client = createClient({ chain: chains.studionet });
-  const contractAddress = process.env.NEXT_PUBLIC_PROOFDATA_CONTRACT_ADDRESS as `0x${string}`;
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let leftData: any = null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let rightData: any = null;
-
-  try {
-    const leftRes = await client.readContract({
-      address: contractAddress,
-      functionName: 'get_warrant',
-      args: [leftId]
-    });
-    if (leftRes && typeof leftRes === 'object' && 'status' in leftRes) {
-      leftData = leftRes;
-    }
-  } catch (e) {
-    console.warn("Left read error", e);
-  }
-
-  try {
-    const rightRes = await client.readContract({
-      address: contractAddress,
-      functionName: 'get_warrant',
-      args: [rightId]
-    });
-    if (rightRes && typeof rightRes === 'object' && 'status' in rightRes) {
-      rightData = rightRes;
-    }
-  } catch (e) {
-    console.warn("Right read error", e);
-  }
+export default async function ComparePage({ searchParams }: { searchParams: Promise<{ left?: string | string[]; right?: string | string[] }> }) {
+  const query = await searchParams;
+  const leftId = typeof query.left === "string" ? query.left : FINAL_PROOF.lowWarrantId;
+  const rightId = typeof query.right === "string" ? query.right : FINAL_PROOF.highWarrantId;
+  const [leftRead, rightRead] = await Promise.allSettled([readWarrant(leftId), readWarrant(rightId)]);
+  const leftData = leftRead.status === "fulfilled" ? leftRead.value : null;
+  const rightData = rightRead.status === "fulfilled" ? rightRead.value : null;
 
   if (!leftData || !rightData) {
     // If we're missing the high warrant (e.g. before it's created), show a loading/waiting state for P6
     return (
       <div className="flex-1 flex flex-col items-center justify-center py-20 px-6">
-        <h1 className="text-3xl font-bold font-mono tracking-widest text-text-dark mb-4">DIFFERENTIAL PROOF PENDING</h1>
+        <h1 className="text-3xl font-bold font-mono tracking-widest text-text-dark mb-4">COMPARISON UNAVAILABLE</h1>
         <p className="text-text-dark-secondary mb-8 text-center max-w-lg">
-          The ProofData Semantic Differential requires two successfully created warrants on Studionet.<br/><br/>
-          Left: {leftId} ({leftData ? 'FOUND' : 'NOT FOUND'})<br/>
-          Right: {rightId} ({rightData ? 'FOUND' : 'NOT FOUND'})
+          Unable to read both warrants from Bradbury. A record may be unavailable or the network may be unreachable.<br/><br/>
+          Left: {leftId} ({leftData ? 'FOUND' : 'READ UNAVAILABLE'})<br/>
+          Right: {rightId} ({rightData ? 'FOUND' : 'READ UNAVAILABLE'})
         </p>
-        <Link href="/create?p6=true" className="bg-[#0A0E17] text-white px-8 py-3 text-sm font-mono tracking-widest uppercase hover:bg-black transition-colors">
-          CREATE HIGH-RISK VARIANT
-        </Link>
+        <a href="/compare" className="bg-[#0A0E17] text-white px-8 py-3 text-sm font-mono tracking-widest uppercase hover:bg-black transition-colors">
+          RELOAD CONTRACT DATA
+        </a>
       </div>
     );
   }
 
+  const sameRequirements = JSON.stringify(leftData.requirements) === JSON.stringify(rightData.requirements);
   const isSameEvidence = leftData.evidence_ref === rightData.evidence_ref && leftData.expected_hash === rightData.expected_hash;
 
   const STATUS_COLORS: Record<string, string> = {
@@ -100,8 +70,16 @@ export default async function ComparePage(props: any) {
               <a href={leftData.evidence_ref} className="font-mono break-all hover:underline">{leftData.evidence_ref}</a>
             </div>
             <div>
-              <div className="text-[10px] uppercase tracking-widest opacity-70 mb-1 font-bold">Shared Fingerprint (SHA-256)</div>
+              <div className="text-[10px] uppercase tracking-widest opacity-70 mb-1 font-bold">Shared Fingerprint (Keccak-256)</div>
               <div className="font-mono break-all font-bold opacity-90">{leftData.expected_hash}</div>
+            </div>
+            <div>
+              <div className="mb-1 font-mono text-xs uppercase">Shared requirements</div>
+              <div className="font-mono">{JSON.stringify(leftData.requirements)} — {sameRequirements ? "MATCH" : "DIFFER"}</div>
+            </div>
+            <div>
+              <div className="mb-1 font-mono text-xs uppercase">Bradbury · Chain 4221</div>
+              <div className="break-all font-mono">{FINAL_PROOF.contractAddress}</div>
             </div>
           </div>
         </div>
@@ -110,10 +88,10 @@ export default async function ComparePage(props: any) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           
           {/* Left Branch */}
-          <div className="bg-white shadow-xl border border-rules-light flex flex-col">
+          <div className="bg-white shadow-xl border border-rules-light flex flex-col text-text-dark">
             <div className="p-6 border-b border-rules-light bg-surface-pale-gray">
-              <div className="text-[10px] font-mono text-text-dark-secondary tracking-widest uppercase mb-1">Low Context</div>
-              <div className="font-mono text-xs opacity-50 break-all">{leftData.id}</div>
+              <div className="text-[10px] font-mono text-text-dark-secondary tracking-widest uppercase mb-1">{leftData.risk_level} Reliance Context</div>
+              <div className="font-mono text-xs opacity-50 break-all"><Link href={`/warrant/${leftData.id}`} className="hover:underline">{leftData.id}</Link></div>
             </div>
             <div className="p-8 flex-1 space-y-6">
               <div>
@@ -132,10 +110,10 @@ export default async function ComparePage(props: any) {
           </div>
 
           {/* Right Branch */}
-          <div className="bg-white shadow-xl border border-rules-light flex flex-col">
+          <div className="bg-white shadow-xl border border-rules-light flex flex-col text-text-dark">
             <div className="p-6 border-b border-rules-light bg-surface-pale-gray">
-              <div className="text-[10px] font-mono text-text-dark-secondary tracking-widest uppercase mb-1">High Context</div>
-              <div className="font-mono text-xs opacity-50 break-all">{rightData.id}</div>
+              <div className="text-[10px] font-mono text-text-dark-secondary tracking-widest uppercase mb-1">{rightData.risk_level} Reliance Context</div>
+              <div className="font-mono text-xs opacity-50 break-all"><Link href={`/warrant/${rightData.id}`} className="hover:underline">{rightData.id}</Link></div>
             </div>
             <div className="p-8 flex-1 space-y-6">
               <div>

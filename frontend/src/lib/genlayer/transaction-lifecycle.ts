@@ -1,149 +1,54 @@
-import { chains } from 'genlayer-js';
+import { transactionsStatusNumberToName, executionResultNumberToName, transactionResultNumberToName } from "genlayer-js/types";
+import { PROOFDATA_RPC_URL } from "./config.ts";
 
-export type NormalizedLifecycleState = 
-  | 'IDLE'
-  | 'SUBMITTING'
-  | 'SUBMITTED'
-  | 'PROCESSING'
-  | 'DECIDED'
-  | 'FINALIZED_SUCCESS'
-  | 'FINALIZED_ERROR'
-  | 'NETWORK_ERROR'
-  | 'FAILED'
-  | 'CANCELED'
-  | 'NOT_FOUND';
-
+export type NormalizedLifecycleState = "IDLE" | "SUBMITTING" | "SUBMITTED" | "PROCESSING" | "DECIDED" | "FINALIZED_SUCCESS" | "FINALIZED_ERROR" | "NETWORK_ERROR" | "FAILED" | "CANCELED" | "NOT_FOUND";
 export interface TransactionStatusInfo {
-  state: NormalizedLifecycleState;
-  rawStatus?: string;
-  rawExecutionResult?: string;
-  errorMessage?: string;
+  state: NormalizedLifecycleState; rawStatus?: string; rawExecutionResult?: string;
+  consensus?: string; outerReceiptStatus?: string; errorMessage?: string;
+}
+export interface BradburyReceipt { status: number; result: number; txExecutionResult: number; recipient?: string; roundData?: unknown[]; }
+
+export async function bradburyRpc<T>(method: string, params: unknown[]): Promise<T> {
+  const response = await fetch(PROOFDATA_RPC_URL, {
+    method: "POST", headers: { "Content-Type": "application/json" }, cache: "no-store",
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }), signal: AbortSignal.timeout(20_000),
+  });
+  if (!response.ok) throw new Error(`Bradbury RPC HTTP ${response.status}`);
+  const json = await response.json();
+  if (json.error) throw new Error(json.error.message || "Bradbury RPC failed.");
+  return json.result as T;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function extractStableTransactionStatus(tx: any): string {
-  if (!tx) return 'UNKNOWN';
-  if (tx.statusName) return String(tx.statusName).toUpperCase();
-  if (tx.status) return String(tx.status).toUpperCase();
-  return 'UNKNOWN';
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function extractStableExecutionResult(tx: any): string | undefined {
-  if (!tx) return undefined;
-  
-  if (tx.execution_result) return String(tx.execution_result).toUpperCase();
-  if (tx.txExecutionResult) return String(tx.txExecutionResult).toUpperCase();
-  
-  if (tx.consensus_data?.leader_receipt?.[0]?.execution_result) {
-    return String(tx.consensus_data.leader_receipt[0].execution_result).toUpperCase();
+export function normalizeBradburyReceipt(tx: BradburyReceipt): TransactionStatusInfo {
+  const status = transactionsStatusNumberToName[String(tx.status) as keyof typeof transactionsStatusNumberToName] || "UNKNOWN";
+  const execution = executionResultNumberToName[String(tx.txExecutionResult) as keyof typeof executionResultNumberToName] || "UNKNOWN";
+  const consensus = transactionResultNumberToName[String(tx.result) as keyof typeof transactionResultNumberToName] || "UNKNOWN";
+  const base = { rawStatus: status, rawExecutionResult: execution, consensus };
+  if (status === "FINALIZED") {
+    const success = execution === "FINISHED_WITH_RETURN" && ["AGREE", "MAJORITY_AGREE"].includes(consensus);
+    return { ...base, state: success ? "FINALIZED_SUCCESS" : "FINALIZED_ERROR", errorMessage: success ? undefined : `GenLayer finalized with ${execution} / ${consensus}.` };
   }
-  
-  if (tx.consensus_history?.consensus_results?.[0]?.leader_result?.[0]?.execution_result) {
-    return String(tx.consensus_history.consensus_results[0].leader_result[0].execution_result).toUpperCase();
-  }
-  
-  if (tx.data) {
-    if (Array.isArray(tx.data) && tx.data[0] && typeof tx.data[0] === 'object' && tx.data[0].execution_result) {
-      return String(tx.data[0].execution_result).toUpperCase();
-    }
-    
-    // Sometimes raw RPC responds with stringified JSON or encoded data inside tx.data
-    if (typeof tx.data === 'string') {
-       try {
-          const parsed = JSON.parse(tx.data);
-          if (parsed && typeof parsed === 'object' && parsed.execution_result) {
-             return String(parsed.execution_result).toUpperCase();
-          }
-       } catch (e) {
-          // ignore parse errors for raw hex/base64 strings
-       }
-    }
-  }
-  
-  return undefined;
-}
-
-function normalizeLifecycle(statusName: string, execResult: string | undefined): NormalizedLifecycleState {
-  if (statusName === 'FINALIZED') {
-    if (execResult === 'SUCCESS' || execResult === '1') {
-      return 'FINALIZED_SUCCESS';
-    } else {
-      return 'FINALIZED_ERROR';
-    }
-  } 
-  
-  if (statusName === 'ACCEPTED') {
-    return 'DECIDED';
-  } 
-  
-  if (statusName === 'PENDING' || statusName === 'PROPOSED') {
-    return 'PROCESSING';
-  } 
-  
-  if (statusName === 'CANCELED' || statusName === 'REVERTED') {
-    return 'FAILED';
-  } 
-  
-  if (statusName === 'ERROR') {
-    return 'FINALIZED_ERROR';
-  }
-
-  return 'PROCESSING'; // default fallback for in-flight states
+  if (status === "CANCELED") return { ...base, state: "CANCELED", errorMessage: "GenLayer transaction was canceled." };
+  if (status === "ACCEPTED" || status === "READY_TO_FINALIZE") return { ...base, state: "DECIDED", errorMessage: execution === "FINISHED_WITH_ERROR" ? "Contract execution failed; protocol finalization is pending." : undefined };
+  return { ...base, state: "PROCESSING" };
 }
 
 export class TransactionTracker {
-  public async getTransactionStatus(hash: string): Promise<TransactionStatusInfo> {
+  private readonly rpc: typeof bradburyRpc;
+  constructor(rpc: typeof bradburyRpc = bradburyRpc) { this.rpc = rpc; }
+  async getTransactionStatus(hash: string, outerHash?: string): Promise<TransactionStatusInfo> {
     try {
-      const rpcUrl = chains.studionet.rpcUrls.default.http[0];
-      const res = await fetch(rpcUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: 1,
-          method: 'eth_getTransactionByHash',
-          params: [hash]
-        })
-      });
-      
-      const json = await res.json();
-      const tx = json.result;
-      
-      if (!tx) {
-        return { state: 'NOT_FOUND', errorMessage: 'Transaction not found.' };
-      }
-
-      const statusName = extractStableTransactionStatus(tx);
-      const execResult = extractStableExecutionResult(tx);
-      const normalized = normalizeLifecycle(statusName, execResult);
-
-      return {
-        state: normalized,
-        rawStatus: statusName,
-        rawExecutionResult: execResult || 'UNKNOWN',
-      };
-    } catch (err: unknown) {
-      console.error("Error fetching transaction:", err);
-      const msg = (err as Error).message || '';
-      if (msg.includes('not found') || msg.includes('does not exist')) {
-         return { state: 'NOT_FOUND', errorMessage: 'Transaction not found on the network yet.' };
-      }
-      return { 
-        state: 'NETWORK_ERROR', 
-        errorMessage: 'Unable to refresh transaction status. The request may still be processing.' 
-      };
+      const [tx, outer] = await Promise.all([
+        this.rpc<BradburyReceipt | null>("gen_getTransactionReceipt", [{ txId: hash }]),
+        outerHash ? this.rpc<{ status: string } | null>("eth_getTransactionReceipt", [outerHash]) : Promise.resolve(null),
+      ]);
+      if (outer?.status === "0x0") return { state: "FAILED", outerReceiptStatus: outer.status, errorMessage: "Outer EVM transaction reverted. GenLayer execution was not qualified." };
+      if (!tx) return { state: "NOT_FOUND", outerReceiptStatus: outer?.status, errorMessage: "Submitted; waiting for the GenLayer transaction to become available." };
+      return { ...normalizeBradburyReceipt(tx), outerReceiptStatus: outer?.status };
+    } catch (error) {
+      return { state: "NETWORK_ERROR", errorMessage: `Unable to refresh transaction status. No write will be retried. ${error instanceof Error ? error.message : "RPC unavailable."}` };
     }
   }
-
-  public isTerminal(state: NormalizedLifecycleState): boolean {
-    return [
-      'FINALIZED_SUCCESS', 
-      'FINALIZED_ERROR', 
-      'FAILED', 
-      'CANCELED',
-    ].includes(state);
-  }
+  isTerminal(state: NormalizedLifecycleState) { return ["FINALIZED_SUCCESS", "FINALIZED_ERROR", "FAILED", "CANCELED"].includes(state); }
 }
-
 export const transactionTracker = new TransactionTracker();

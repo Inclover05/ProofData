@@ -33,7 +33,7 @@ export default function Home() {
             <div className="absolute -left-12 top-1/2 -translate-y-1/2 w-12 h-px text-rules-light/50"><line x1="0" y1="0" x2="48" y2="0" stroke="currentColor" strokeWidth="1" strokeDasharray="4 4" /></div>
             
             <div className="flex justify-between items-center border-b border-rules-light pb-3">
-              <span className="text-[10px] uppercase tracking-[0.2em] text-text-dark-secondary font-mono">Reliance Warrant</span>
+              <span className="text-[10px] uppercase tracking-[0.2em] text-text-dark-secondary font-mono">Illustrative Warrant</span>
               <span className="text-[10px] bg-verdict-warranted-bg text-verdict-warranted-text px-2 py-1 uppercase font-mono tracking-wider font-semibold">Warranted</span>
             </div>
             

@@ -1,0 +1,12 @@
+{
+  "network": "Bradbury",
+  "chainId": 4221,
+  "contractAddress": "0xa73c0183e2e3605bbd5013abcb9c5683f7db1b4a",
+  "lowWarrantId": "storage-fix-low-diag-001",
+  "highWarrantId": "thesis2-high-001",
+  "sampleEvidence": {
+    "url": "https://unpkg.com/genlayer-js@1.1.8/dist/index-BCPb0x30.d.ts",
+    "keccak": "b4c91843ee2e1a3043bb3b49a431c513356331023042861a525308e449210525",
+    "byteLength": 723
+  }
+}
