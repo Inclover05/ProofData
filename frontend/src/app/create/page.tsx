@@ -100,29 +100,29 @@ export default function CreateWarrant() {
     const isTerminal = transactionTracker.isTerminal(lifecycleState);
 
     return (
-      <div className="bg-bg-cool-slate border border-rules p-8 md:p-10 mb-8">
-        <h2 className="text-2xl text-white mb-6 font-light border-b border-rules pb-4">
+      <div className="protocol-panel mb-8">
+        <h2 className="editorial border-b border-rules pb-4">
           RELIANCE REQUEST
         </h2>
         
         <div className="space-y-4 font-mono text-sm mb-8">
           <div className="flex items-center gap-4">
-            <div className={`w-3 h-3 rounded-full ${lifecycleState === 'SUBMITTING' ? 'bg-accent animate-pulse' : 'bg-green-500'}`}></div>
+            <div className={`w-3 h-3 rounded-full ${lifecycleState === 'SUBMITTING' ? 'bg-accent animate-pulse' : 'bg-positive'}`}></div>
             <div className={lifecycleState === 'SUBMITTING' ? 'text-white' : 'text-text-secondary'}>{lifecycleState === "SUBMITTING" ? "Awaiting wallet authorization / submission" : "Submitted"}</div>
           </div>
           
           <div className="flex items-center gap-4">
-            <div className={`w-3 h-3 rounded-full ${['SUBMITTING', 'SUBMITTED', 'NOT_FOUND'].includes(lifecycleState) ? 'bg-bg-deep-graphite' : lifecycleState === 'PROCESSING' ? 'bg-accent animate-pulse' : 'bg-green-500'}`}></div>
+            <div className={`w-3 h-3 rounded-full ${['SUBMITTING', 'SUBMITTED', 'NOT_FOUND'].includes(lifecycleState) ? 'bg-bg-deep-graphite' : lifecycleState === 'PROCESSING' ? 'bg-accent animate-pulse' : 'bg-positive'}`}></div>
             <div className={['SUBMITTING', 'SUBMITTED', 'NOT_FOUND'].includes(lifecycleState) ? 'text-text-secondary/50' : lifecycleState === 'PROCESSING' ? 'text-white' : 'text-text-secondary'}>Processing</div>
           </div>
 
           <div className="flex items-center gap-4">
-            <div className={`w-3 h-3 rounded-full ${!['DECIDED', 'FINALIZED_SUCCESS', 'FINALIZED_ERROR'].includes(lifecycleState) ? 'bg-bg-deep-graphite' : lifecycleState === 'DECIDED' ? 'bg-accent animate-pulse' : 'bg-green-500'}`}></div>
+            <div className={`w-3 h-3 rounded-full ${!['DECIDED', 'FINALIZED_SUCCESS', 'FINALIZED_ERROR'].includes(lifecycleState) ? 'bg-bg-deep-graphite' : lifecycleState === 'DECIDED' ? 'bg-accent animate-pulse' : 'bg-positive'}`}></div>
             <div className={!['DECIDED', 'FINALIZED_SUCCESS', 'FINALIZED_ERROR'].includes(lifecycleState) ? 'text-text-secondary/50' : lifecycleState === 'DECIDED' ? 'text-white' : 'text-text-secondary'}>Decision Reached</div>
           </div>
           
           <div className="flex items-center gap-4">
-            <div className={`w-3 h-3 rounded-full ${!isTerminal ? 'bg-bg-deep-graphite' : lifecycleState === 'FINALIZED_SUCCESS' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+            <div className={`w-3 h-3 rounded-full ${!isTerminal ? 'bg-bg-deep-graphite' : lifecycleState === 'FINALIZED_SUCCESS' ? 'bg-positive' : 'bg-negative'}`}></div>
             <div className={!isTerminal ? 'text-text-secondary/50' : 'text-white'}>
               {lifecycleState === 'FINALIZED_SUCCESS' ? 'Finalized - Execution Verified' : 
                lifecycleState === 'FINALIZED_ERROR' ? 'Finalized - Execution Failed' : 
@@ -141,7 +141,7 @@ export default function CreateWarrant() {
         </div>
 
         {trackingError && (
-          <div className="mt-6 p-4 border border-[#800010]/20 bg-[#FEE7EA] text-[#800010] text-sm font-mono">
+          <div className="error-notice">
             {trackingError}
             {!isTerminal && (
                <button onClick={() => startTracking(tracked!)} className="block mt-2 underline">Retry Status Check</button>
@@ -161,16 +161,12 @@ export default function CreateWarrant() {
     );
   };
 
-  return (
-    <div className="flex-1 flex flex-col relative w-full items-center bg-bg-dark-slate font-sans">
-      <div className="absolute inset-0 z-0 opacity-40 reliance-field pointer-events-none"></div>
-      
-      <div className="max-w-4xl px-6 py-20 w-full relative z-10">
-        
+  return <div className="container form-container">
+    <header className="page-heading form-heading"><div><span className="eyebrow">RELIANCE WARRANT / INITIALIZATION</span><h1 className="editorial">Issue a Reliance Warrant.</h1><p>Bind exact evidence to the action you intend to take. The contract controls the lifecycle; GenLayer validators determine the verdict.</p></div><span className="draft-label">{txHash ? lifecycleState.replace('_', ' ') : 'DRAFTING'}</span></header>
         {/* Wallet Bar */}
-        <div className="mb-8 flex justify-between items-center bg-bg-cool-slate border border-rules p-4">
-          <div className="text-xs font-mono text-text-secondary">
-            {network ? `NETWORK: ${network}` : 'NOT CONNECTED'}
+        <div className="wallet-bar" id="wallet">
+          <div className="metadata">
+            {network ? `NETWORK: ${network}` : 'WALLET DISCONNECTED'}<p>Explore first. Connect when you’re ready to issue.</p>
           </div>
           <div>
             {!address ? (
@@ -179,13 +175,13 @@ export default function CreateWarrant() {
                   type="button" 
                   onClick={handleConnectClick} 
                   disabled={isConnecting}
-                  className="text-xs font-mono uppercase bg-text-dark text-white px-4 py-2 hover:bg-black transition-colors"
+                  className="wallet-button"
                 >
                   {isConnecting ? 'CONNECTING...' : 'CONNECT WALLET'}
                 </button>
                 {showWalletSelector && (
-                  <div className="absolute right-0 top-full mt-2 w-64 bg-bg-deep-graphite border border-rules shadow-2xl z-50">
-                    <div className="p-3 border-b border-rules text-xs font-mono text-text-secondary uppercase">Select Wallet</div>
+                  <div className="wallet-menu">
+                    <div className="p-3 border-b border-rules metadata uppercase">Select Wallet</div>
                     {providers.map(p => (
                       <button 
                         key={p.info.uuid}
@@ -193,7 +189,7 @@ export default function CreateWarrant() {
                           setShowWalletSelector(false);
                           connectToProvider(p);
                         }}
-                        className="w-full text-left px-4 py-3 text-sm text-white hover:bg-bg-cool-slate flex items-center gap-3 transition-colors"
+                        className="wallet-option"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={p.info.icon} alt="" className="w-5 h-5" />
@@ -212,173 +208,34 @@ export default function CreateWarrant() {
         </div>
 
         {walletError && (
-          <div className="mb-8 p-4 border border-[#800010]/20 bg-[#FEE7EA] text-[#800010] text-sm font-mono">
+          <div className="error-notice">
             {walletError}
           </div>
         )}
 
-        <div className="mb-12 border-b border-rules pb-12 flex flex-col md:flex-row md:justify-between md:items-end gap-6">
-          <div>
-            <div className="text-[10px] uppercase tracking-[0.2em] text-text-secondary font-mono mb-4 flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-accent"></div>
-              Warrant Initialization
-            </div>
-            <h1 className="text-4xl md:text-5xl font-light tracking-tight text-white mb-4">Reliance Dossier</h1>
-            <p className="text-text-secondary leading-relaxed font-light max-w-xl">
-              Assemble the evidence and decision context. The GenLayer network will determine if the exact evidence is sufficient to authorize your intended action.
-            </p>
-          </div>
-          <div className="text-right">
-            <div className="text-[10px] uppercase tracking-wider text-text-secondary font-mono mb-1">Status</div>
-            <div className="text-sm font-mono text-white bg-bg-midnight-navy px-3 py-1 border border-rules inline-block uppercase">
-              {txHash ? lifecycleState.replace('_', ' ') : 'DRAFTING'}
-            </div>
-          </div>
-        </div>
 
-        {txHash ? renderLifecycleUI() : (
-          <form onSubmit={handleSubmit} className="space-y-8">
-            
-
-            {submitError && (
-              <div className="p-4 border border-[#800010]/20 bg-[#FEE7EA] text-[#800010] text-sm font-mono">
-                {trackingError}
-              </div>
-            )}
-
-            <div className="bg-bg-cool-slate border border-rules relative">
-              <div className="absolute -left-3 top-6 w-6 h-6 bg-accent text-white flex items-center justify-center text-xs font-mono rounded-sm shadow-[0_0_10px_rgba(43,92,255,0.4)]">1</div>
-              <div className="p-8 md:p-10">
-                <h2 className="text-xl font-medium text-white mb-8 border-b border-rules pb-4 flex justify-between items-end">
-                  <span>Evidence Source</span>
-                  <span className="text-[10px] font-mono text-text-secondary font-normal tracking-widest uppercase">Target Identity</span>
-                </h2>
-                
-                <div className="grid gap-6">
-                  <div>
-                    <label htmlFor="evidenceUrl" className="text-xs font-mono uppercase tracking-widest text-text-secondary block mb-3">Resource URI</label>
-                    <input 
-                      id="evidenceUrl"
-                      type="url" 
-                      required
-                      value={url}
-                      onChange={(e) => {
-                        setUrl(e.target.value);
-                        invalidateEstimate();
-                      }}
-                      className="w-full bg-bg-deep-graphite border border-rules px-5 py-4 font-mono text-sm text-white focus:outline-none focus:border-accent transition-colors placeholder:text-text-secondary/30"
-                      placeholder="https://example.com/api/data"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="expectedHash" className="text-xs font-mono uppercase tracking-widest text-text-secondary block mb-3">Expected Keccak256 Hash</label>
-                    <input 
-                      id="expectedHash"
-                      type="text" 
-                      required
-                      value={expectedHash}
-                      onChange={(e) => {
-                        setExpectedHash(e.target.value);
-                        invalidateEstimate();
-                      }}
-                      className="w-full bg-bg-deep-graphite border border-rules px-5 py-4 font-mono text-sm text-white focus:outline-none focus:border-accent transition-colors placeholder:text-text-secondary/30"
-                      placeholder="d31880ae9181571d18323e1817597e4dcc2d5fb312920a662d1696bb9d7ae0ac"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-surface-ivory text-text-dark border border-rules-light relative shadow-xl">
-              <div className="absolute -left-3 top-6 w-6 h-6 bg-text-dark text-white flex items-center justify-center text-xs font-mono rounded-sm">2</div>
-              <div className="p-8 md:p-10">
-                <h2 className="text-xl font-medium text-text-dark mb-8 border-b border-rules-light pb-4 flex justify-between items-end">
-                  <span>Decision Context</span>
-                  <span className="text-[10px] font-mono text-text-dark-secondary font-normal tracking-widest uppercase">Intended Action</span>
-                </h2>
-                
-                <div className="grid gap-8">
-                  <div>
-                    <label htmlFor="action" className="text-xs font-mono uppercase tracking-widest text-text-dark-secondary block mb-3">Proposed Action</label>
-                    <textarea 
-                      id="action"
-                      required
-                      value={action}
-                      onChange={(e) => {
-                        setAction(e.target.value);
-                        invalidateEstimate();
-                      }}
-                      rows={3}
-                      className="w-full bg-surface-pale-gray border border-rules-light px-5 py-4 text-sm text-text-dark focus:outline-none focus:border-text-dark transition-colors placeholder:text-text-dark-secondary/50 resize-y"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-mono uppercase tracking-widest text-text-dark-secondary block mb-3">Consequence Severity</label>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      {[
-                        { id: 'LOW', label: 'Low', desc: 'Reversible, informational' },
-                        { id: 'MEDIUM', label: 'Medium', desc: 'Moderate financial risk' },
-                        { id: 'HIGH', label: 'High', desc: 'Irreversible, high value' }
-                      ].map((level) => (
-                        <button
-                          key={level.id}
-                          type="button"
-                          onClick={() => {
-                            setRisk(level.id);
-                            invalidateEstimate();
-                          }}
-                          className={`text-left p-4 border transition-all ${
-                            risk === level.id 
-                              ? 'border-text-dark bg-white shadow-[inset_2px_0_0_0_#0A0E17]' 
-                              : 'border-rules-light bg-surface-pale-gray hover:border-text-dark-secondary text-text-dark-secondary'
-                          }`}
-                        >
-                          <span className={`font-mono tracking-wider text-xs font-semibold block mb-2 ${risk === level.id ? 'text-text-dark' : ''}`}>{level.id}</span>
-                          <span className="text-xs">{level.desc}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-bg-midnight-navy border border-rules relative">
-              <div className="absolute -left-3 top-6 w-6 h-6 bg-bg-deep-graphite border border-rules text-text-secondary flex items-center justify-center text-xs font-mono rounded-sm">3</div>
-              <div className="p-8 md:p-10">
-                <h2 className="text-xl font-medium text-text-primary mb-6 border-b border-rules pb-4 flex justify-between items-end">
-                  <span>Validation Bounds</span>
-                  <span className="text-[10px] font-mono text-text-secondary font-normal tracking-widest uppercase">Optional</span>
-                </h2>
-                <div className="grid gap-3">
-                  <label htmlFor="requirements" className="text-xs font-mono uppercase tracking-widest text-text-secondary mb-1 block">Specific Criteria</label>
-                  <textarea 
-                    id="requirements"
-                    value={reqs}
-                    onChange={(e) => {
-                      setReqs(e.target.value);
-                      invalidateEstimate();
-                    }}
-                    rows={2}
-                    className="w-full bg-bg-deep-graphite/50 border border-rules px-5 py-3 text-sm text-white focus:outline-none focus:border-text-secondary transition-colors placeholder:text-text-secondary/30 resize-y"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-8 flex justify-end gap-4">
-              <button 
-                type="submit" 
-                disabled={isSubmitting || !url || !action}
-                className="group relative px-12 py-5 bg-accent text-white font-mono tracking-widest uppercase text-sm transition-all hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed border border-accent"
-              >
-                {isSubmitting ? 'AWAITING WALLET / SUBMITTING...' : 'ISSUE RELIANCE WARRANT'}
-              </button>
-            </div>
-          </form>
-        )}
-      </div>
-    </div>
-  );
+    {txHash ? renderLifecycleUI() : <form onSubmit={handleSubmit} className="glass instrument-form">
+      {submitError && <div className="error-notice" role="alert">{trackingError}</div>}
+      <section className="form-stage"><header className="form-stage-header"><h2><span className="form-stage-number">01 /</span> Evidence</h2><span className="metadata">EXACT SOURCE + CRYPTOGRAPHIC IDENTITY</span></header>
+        <div className="field-group"><label htmlFor="evidenceUrl">Resource URI</label><input id="evidenceUrl" type="url" required value={url} onChange={(e) => { setUrl(e.target.value); invalidateEstimate(); }} className="form-input form-input--technical" placeholder="https://example.com/api/data"/></div>
+        <div className="field-group"><label htmlFor="expectedHash">Expected Keccak256 Hash</label><input id="expectedHash" type="text" required value={expectedHash} onChange={(e) => { setExpectedHash(e.target.value); invalidateEstimate(); }} className="form-input form-input--technical" placeholder="Expected exact-byte Keccak-256"/></div>
+        <p className="form-hint">The evidence must match this exact hash before semantic adjudication can begin.</p>
+      </section>
+      <section className="form-stage"><header className="form-stage-header"><h2><span className="form-stage-number">02 /</span> Intended reliance</h2><span className="metadata">ACTION-RELATIVE SUFFICIENCY</span></header>
+        <div className="field-group"><label htmlFor="action">Proposed Action — what action will rely on this evidence?</label><textarea id="action" required value={action} onChange={(e) => { setAction(e.target.value); invalidateEstimate(); }} rows={3} className="form-input purpose-input"/></div>
+      </section>
+      <section className="form-stage"><header className="form-stage-header"><h2><span className="form-stage-number">03 /</span> Risk</h2><span className="metadata">CONSEQUENCE SEVERITY</span></header>
+        <div className="risk-grid" role="group" aria-label="Consequence severity">{[
+          { id: 'LOW', label: 'Low', desc: 'Reversible, informational' },
+          { id: 'MEDIUM', label: 'Medium', desc: 'Moderate financial risk' },
+          { id: 'HIGH', label: 'High', desc: 'Irreversible, high value' }
+        ].map((level) => <button key={level.id} type="button" onClick={() => { setRisk(level.id); invalidateEstimate(); }} className="risk-option" aria-pressed={risk === level.id}><span>{level.id}</span><small>{level.desc}</small></button>)}</div>
+      </section>
+      <section className="form-stage"><header className="form-stage-header"><h2><span className="form-stage-number">04 /</span> Requirements</h2><span className="metadata">OPTIONAL / ONE PER LINE</span></header>
+        <div className="field-group"><label htmlFor="requirements">Specific Criteria</label><textarea id="requirements" value={reqs} onChange={(e) => { setReqs(e.target.value); invalidateEstimate(); }} rows={2} className="form-input"/></div>
+        <p className="form-hint">Leave blank if there are no additional requirements.</p>
+      </section>
+      <section className="form-stage issue-stage"><div><header className="form-stage-header"><h2><span className="form-stage-number">05 /</span> Issue warrant</h2></header><p className="form-hint">Your selected wallet signs. The contract decides.</p></div><button type="submit" disabled={isSubmitting || !url || !action} className="button button--primary">{isSubmitting ? 'AWAITING WALLET / SUBMITTING...' : 'ISSUE RELIANCE WARRANT'}<span aria-hidden="true">↗</span></button></section>
+    </form>}
+  </div>;
 }
