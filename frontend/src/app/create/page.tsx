@@ -33,6 +33,9 @@ export default function CreateWarrant() {
   const initialAction = searchParams.get("action") || "";
   const initialRisk = searchParams.get("risk") || "LOW";
   const initialRequirements = searchParams.get("requirements") || "";
+  const compareRole = searchParams.get("compareRole") === "LOW" || searchParams.get("compareRole") === "HIGH"
+    ? searchParams.get("compareRole") as "LOW" | "HIGH"
+    : null;
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [risk, setRisk] = useState(initialRisk);
@@ -127,6 +130,9 @@ export default function CreateWarrant() {
         setInfo({ state: "IDLE" });
         if (result.rawError) console.error("Technical details:", result.rawError);
       } else if (result.txHash) {
+        if (compareRole && typeof window !== "undefined") {
+          localStorage.setItem(compareRole === "LOW" ? "proofdata:compare-low-id" : "proofdata:compare-high-id", generatedWarrantId);
+        }
         startTracking({ txHash: result.txHash, outerTxHash: result.outerTxHash, warrantId: generatedWarrantId });
       }
     } catch (error) {
@@ -142,6 +148,7 @@ export default function CreateWarrant() {
     const isTerminal = transactionTracker.isTerminal(lifecycleState);
     return <div className="protocol-panel mb-8">
       <h2 className="editorial border-b border-rules pb-4">RELIANCE REQUEST</h2>
+      {compareRole && <div className="mb-6 p-4 bg-surface-ivory text-text-dark border border-rules-light"><span className="eyebrow">COMPARISON MODE / {compareRole}</span><p className="text-sm mt-2">ProofData saved this warrant for your side-by-side comparison. Finish this warrant, then return to Compare to run the other side.</p></div>}
       <div className="space-y-4 font-mono text-sm mb-8">
         <div className="flex items-center gap-4"><div className={`w-3 h-3 rounded-full ${lifecycleState === "SUBMITTING" ? "bg-accent animate-pulse" : "bg-positive"}`}></div><div className={lifecycleState === "SUBMITTING" ? "text-white" : "text-text-secondary"}>{lifecycleState === "SUBMITTING" ? "Awaiting wallet authorization / submission" : "Submitted"}</div></div>
         <div className="flex items-center gap-4"><div className={`w-3 h-3 rounded-full ${["SUBMITTING", "SUBMITTED", "NOT_FOUND"].includes(lifecycleState) ? "bg-bg-deep-graphite" : lifecycleState === "PROCESSING" ? "bg-accent animate-pulse" : "bg-positive"}`}></div><div className={["SUBMITTING", "SUBMITTED", "NOT_FOUND"].includes(lifecycleState) ? "text-text-secondary/50" : lifecycleState === "PROCESSING" ? "text-white" : "text-text-secondary"}>Processing</div></div>
@@ -160,7 +167,7 @@ export default function CreateWarrant() {
         <div className="text-[10px] uppercase tracking-widest text-text-dark-secondary mb-2">Authoritative Contract State</div>
         <div className="text-lg font-medium">{warrantStatus}</div>
         <div className="text-xs text-text-dark-secondary mt-2">Your warrant exists on Bradbury. Continue to verify the evidence, then request the validator judgment.</div>
-        <Link href={`/warrant/${tracked?.warrantId}`} className="mt-4 block font-mono text-sm text-accent underline">CONTINUE TO WARRANT</Link>
+        <Link href={`/warrant/${tracked?.warrantId}${compareRole ? `?compareRole=${compareRole}` : ""}`} className="mt-4 block font-mono text-sm text-accent underline">CONTINUE TO WARRANT</Link>
       </div>}
     </div>;
   };
@@ -177,7 +184,7 @@ export default function CreateWarrant() {
       <section className="form-stage"><header className="form-stage-header"><h2><span className="form-stage-number">01 /</span> Paste your evidence</h2><span className="metadata">PUBLIC HTTPS LINK</span></header>
         <div className="field-group"><label htmlFor="evidenceUrl">Link to the page, document, product, listing, or other public text evidence</label><input id="evidenceUrl" type="url" required value={url} onChange={event => { setUrl(event.target.value); setExpectedHash(""); setPrepared(null); setEvidenceError(null); invalidate(); }} className="form-input form-input--technical" placeholder="https://example.com/property-listing"/></div>
         <div className="hero-actions"><button type="button" className="button button--secondary" disabled={!url.trim() || isPreparingEvidence} onClick={prepareEvidence}>{isPreparingEvidence ? "CHECKING EVIDENCE..." : "PREPARE EVIDENCE"}</button><button type="button" className="button button--secondary" onClick={loadReferenceExample}>LOAD REFERENCE EXAMPLE</button></div>
-        <p className="form-hint">You do not need to calculate a hash. ProofData does that for you and checks that the page is stable before you spend a transaction.</p>
+        <p className="form-hint">You do not need to calculate a hash. ProofData does that for you and checks that the page is stable before you spend a transaction. Pages that change on every request are rejected before you sign.</p>
         {evidenceError && <div className="error-notice">{evidenceError}</div>}
         {prepared && <div className="bg-white p-4 border border-rules-light text-xs font-mono text-text-dark-secondary mt-4 space-y-2"><div><span className="text-text-dark font-semibold">Evidence ready</span>{prepared.bytes ? ` · ${prepared.bytes.toLocaleString()} bytes` : ""}</div><div className="break-all"><span className="text-text-dark font-semibold">Exact identity:</span> {expectedHash}</div><div className="break-all"><span className="text-text-dark font-semibold">Resolved URL:</span> {url}</div></div>}
       </section>
