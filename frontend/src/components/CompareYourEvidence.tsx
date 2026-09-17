@@ -7,6 +7,8 @@ interface PreparedEvidence {
   hash: string;
   bytes: number;
   contentType: string;
+  snapshot?: boolean;
+  originalUrl?: string;
 }
 
 interface ComparisonDraft {
@@ -15,6 +17,7 @@ interface ComparisonDraft {
   highAction: string;
   requirements: string;
   prepared: PreparedEvidence | null;
+  snapshotText: string;
 }
 
 const LOW_KEY = "proofdata:compare-low-id";
@@ -31,6 +34,9 @@ export function CompareYourEvidence() {
   const [prepared, setPrepared] = useState<PreparedEvidence | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [snapshotRecommended, setSnapshotRecommended] = useState(false);
+  const [snapshotText, setSnapshotText] = useState("");
+  const [snapshotLoading, setSnapshotLoading] = useState(false);
   const [leftId, setLeftId] = useState("");
   const [rightId, setRightId] = useState("");
   const [hydrated, setHydrated] = useState(false);
@@ -47,6 +53,7 @@ export function CompareYourEvidence() {
         setLowAction(typeof draft.lowAction === "string" && draft.lowAction ? draft.lowAction : DEFAULT_LOW);
         setHighAction(typeof draft.highAction === "string" && draft.highAction ? draft.highAction : DEFAULT_HIGH);
         setRequirements(typeof draft.requirements === "string" ? draft.requirements : "");
+        setSnapshotText(typeof draft.snapshotText === "string" ? draft.snapshotText : "");
         if (draft.prepared?.url && draft.prepared?.hash) setPrepared(draft.prepared);
       } catch {
         localStorage.removeItem(DRAFT_KEY);
@@ -57,14 +64,15 @@ export function CompareYourEvidence() {
 
   useEffect(() => {
     if (!hydrated) return;
-    const draft: ComparisonDraft = { url, lowAction, highAction, requirements, prepared };
+    const draft: ComparisonDraft = { url, lowAction, highAction, requirements, prepared, snapshotText };
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-  }, [hydrated, url, lowAction, highAction, requirements, prepared]);
+  }, [hydrated, url, lowAction, highAction, requirements, prepared, snapshotText]);
 
   const prepare = async () => {
     setLoading(true);
     setError(null);
     setPrepared(null);
+    setSnapshotRecommended(false);
     try {
       const response = await fetch("/api/evidence/prepare", {
         method: "POST",
@@ -72,7 +80,10 @@ export function CompareYourEvidence() {
         body: JSON.stringify({ url }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Unable to prepare this evidence.");
+      if (!response.ok) {
+        if (data.snapshotRecommended) setSnapshotRecommended(true);
+        throw new Error(data.error || "Unable to prepare this evidence.");
+      }
       setPrepared(data);
       setUrl(data.url);
       setLeftId("");
@@ -86,6 +97,30 @@ export function CompareYourEvidence() {
     }
   };
 
+  const createSnapshot = async () => {
+    setSnapshotLoading(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/evidence/snapshot", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ sourceUrl: url, text: snapshotText }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to create a fixed evidence snapshot.");
+      setPrepared(data);
+      setSnapshotRecommended(false);
+      setLeftId("");
+      setRightId("");
+      localStorage.removeItem(LOW_KEY);
+      localStorage.removeItem(HIGH_KEY);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to create a fixed evidence snapshot.");
+    } finally {
+      setSnapshotLoading(false);
+    }
+  };
+
   const startOver = () => {
     setUrl("");
     setLowAction(DEFAULT_LOW);
@@ -93,6 +128,8 @@ export function CompareYourEvidence() {
     setRequirements("");
     setPrepared(null);
     setError(null);
+    setSnapshotRecommended(false);
+    setSnapshotText("");
     setLeftId("");
     setRightId("");
     localStorage.removeItem(LOW_KEY);
@@ -140,6 +177,7 @@ export function CompareYourEvidence() {
               setUrl(event.target.value);
               setPrepared(null);
               setError(null);
+              setSnapshotRecommended(false);
             }}
           />
         </div>
@@ -149,13 +187,37 @@ export function CompareYourEvidence() {
           </button>
           {(url || prepared || leftId || rightId) && <button type="button" className="button button--secondary" onClick={startOver}>START OVER</button>}
         </div>
-        <p className="form-hint">ProofData fetches the page twice. If the exact bytes stay stable, it creates the cryptographic identity for you. Changing pages are rejected before you sign.</p>
+        <p className="form-hint">ProofData first tries to lock the exact page bytes. If the site blocks automated retrieval or changes on every request, you can create a fixed snapshot from the visible listing text instead.</p>
         {error && <div className="error-notice">{error}</div>}
+
+        {snapshotRecommended && !prepared && (
+          <div className="mt-5 p-5 border border-rules-light bg-white text-text-dark">
+            <span className="eyebrow">FIXED SNAPSHOT FALLBACK</span>
+            <h3 className="mt-2 text-lg font-medium">This webpage cannot be locked directly.</h3>
+            <p className="form-hint mt-2">Open the original page in your browser, copy the visible listing details you want evaluated, and paste them below. ProofData will create a stable evidence URL containing that exact text. The snapshot records the original source URL but does not claim the website itself was independently verified.</p>
+            <div className="field-group mt-4">
+              <label htmlFor="snapshotText">Visible evidence from the listing</label>
+              <textarea
+                id="snapshotText"
+                className="form-input purpose-input"
+                rows={10}
+                value={snapshotText}
+                onChange={event => setSnapshotText(event.target.value)}
+                placeholder={"Example:\nProperty title\nPrice\nLocation\nBedrooms / bathrooms\nSeller description\nClaims about condition, title, inspection, ownership, etc."}
+              />
+            </div>
+            <button type="button" className="button button--primary" onClick={createSnapshot} disabled={snapshotLoading || !snapshotText.trim()}>
+              {snapshotLoading ? "CREATING SNAPSHOT..." : "CREATE FIXED EVIDENCE SNAPSHOT"}
+            </button>
+          </div>
+        )}
+
         {prepared && (
           <div className="bg-white p-4 border border-rules-light text-xs font-mono text-text-dark-secondary mt-4 space-y-2">
-            <div><span className="text-text-dark font-semibold">Evidence ready:</span> {prepared.bytes.toLocaleString()} bytes</div>
+            <div><span className="text-text-dark font-semibold">Evidence ready:</span> {prepared.bytes.toLocaleString()} bytes {prepared.snapshot ? "· FIXED SNAPSHOT" : ""}</div>
             <div className="break-all"><span className="text-text-dark font-semibold">Keccak-256:</span> {prepared.hash}</div>
             <div className="break-all"><span className="text-text-dark font-semibold">Locked URL:</span> {prepared.url}</div>
+            {prepared.originalUrl && <div className="break-all"><span className="text-text-dark font-semibold">Original source:</span> {prepared.originalUrl}</div>}
             <div><span className="text-text-dark font-semibold">Type:</span> {prepared.contentType || "text"}</div>
           </div>
         )}
