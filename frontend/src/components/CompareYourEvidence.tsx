@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 interface PreparedEvidence {
   url: string;
@@ -8,6 +8,9 @@ interface PreparedEvidence {
   bytes: number;
   contentType: string;
 }
+
+const LOW_KEY = "proofdata:compare-low-id";
+const HIGH_KEY = "proofdata:compare-high-id";
 
 export function CompareYourEvidence() {
   const [url, setUrl] = useState("");
@@ -20,7 +23,10 @@ export function CompareYourEvidence() {
   const [leftId, setLeftId] = useState("");
   const [rightId, setRightId] = useState("");
 
-  const encodedRequirements = useMemo(() => encodeURIComponent(requirements), [requirements]);
+  useEffect(() => {
+    setLeftId(localStorage.getItem(LOW_KEY) || "");
+    setRightId(localStorage.getItem(HIGH_KEY) || "");
+  }, []);
 
   const prepare = async () => {
     setLoading(true);
@@ -36,6 +42,10 @@ export function CompareYourEvidence() {
       if (!response.ok) throw new Error(data.error || "Unable to prepare this evidence.");
       setPrepared(data);
       setUrl(data.url);
+      setLeftId("");
+      setRightId("");
+      localStorage.removeItem(LOW_KEY);
+      localStorage.removeItem(HIGH_KEY);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to prepare this evidence.");
     } finally {
@@ -51,6 +61,7 @@ export function CompareYourEvidence() {
       action,
       risk,
       requirements,
+      compareRole: risk,
     });
     return `/create?${params.toString()}`;
   };
@@ -115,15 +126,16 @@ export function CompareYourEvidence() {
 
       <section className="form-stage">
         <header className="form-stage-header"><h3>Run both real warrants</h3></header>
-        <p className="form-hint">Create the LOW warrant first, finish its validation and adjudication, then create the HIGH warrant with the same evidence. Copy each warrant ID when finished.</p>
+        <p className="form-hint">Start with LOW. Finish its evidence check and judgment. Return here, run HIGH with the same evidence, then compare both results.</p>
         <div className="hero-actions">
-          <a className={`button button--primary ${!prepared ? "pointer-events-none opacity-50" : ""}`} href={createHref("LOW", lowAction)}>CREATE LOW WARRANT ↗</a>
-          <a className={`button button--secondary ${!prepared ? "pointer-events-none opacity-50" : ""}`} href={createHref("HIGH", highAction)}>CREATE HIGH WARRANT ↗</a>
+          <a className={`button button--primary ${!prepared ? "pointer-events-none opacity-50" : ""}`} href={createHref("LOW", lowAction)}>{leftId ? "LOW WARRANT SAVED ✓" : "CREATE LOW WARRANT ↗"}</a>
+          <a className={`button button--secondary ${!prepared ? "pointer-events-none opacity-50" : ""}`} href={createHref("HIGH", highAction)}>{rightId ? "HIGH WARRANT SAVED ✓" : "CREATE HIGH WARRANT ↗"}</a>
         </div>
       </section>
 
       <section className="form-stage">
         <header className="form-stage-header"><h3>Open your final comparison</h3></header>
+        <p className="form-hint">ProofData remembers warrant IDs created from this browser. You can still edit them manually if needed.</p>
         <div className="field-group">
           <label htmlFor="leftWarrant">LOW warrant ID</label>
           <input id="leftWarrant" className="form-input form-input--technical" value={leftId} onChange={event => setLeftId(event.target.value)} placeholder="warrant-..." />
