@@ -85,19 +85,19 @@ export function AdjudicateAction({ warrantId, method }: AdjudicateActionProps) {
   const finalizedError = ['FINALIZED_ERROR', 'FAILED', 'CANCELED'].includes(lifecycleState);
 
   return (
-    <div className="mt-12 p-8 border border-rules-light bg-surface-pale-gray">
+    <div className="protocol-panel mt-12">
       <h3 className="text-xs uppercase tracking-widest font-mono text-text-dark-secondary mb-6 border-b border-rules-light pb-2">
         {isRetrieval ? "Evidence Retrieval / Hash Validation" : "Semantic Adjudication"}
       </h3>
 
       {walletError && (
-        <div className="mb-4 p-4 border border-[#800010]/20 bg-[#FEE7EA] text-[#800010] text-xs font-mono">
+        <div className="error-notice">
           {walletError}
         </div>
       )}
 
       {trackingError && (
-        <div className="mb-4 p-4 border border-[#800010]/20 bg-[#FEE7EA] text-[#800010] text-xs font-mono">
+        <div className="error-notice">
           {trackingError}
           {!isTerminal && txHash && (
              <button onClick={() => startTracking(tracked!)} className="block mt-2 underline">Retry Status Check</button>
@@ -110,14 +110,14 @@ export function AdjudicateAction({ warrantId, method }: AdjudicateActionProps) {
           <button
             onClick={handleAdjudicate}
             disabled={isSubmitting || (isConnecting && !address)}
-            className="w-full bg-[#0A0E17] text-white py-4 font-mono text-sm tracking-widest uppercase hover:bg-black transition-colors disabled:opacity-50"
+            className="button button--primary w-full"
           >
             {isSubmitting ? "AWAITING WALLET / SUBMITTING..." : !address ? "CONNECT WALLET TO CONTINUE" : isRetrieval ? "RETRIEVE AND VALIDATE EVIDENCE" : "ADJUDICATE WARRANT"}
           </button>
 
           {showWalletSelector && !address && (
-            <div className="absolute left-0 right-0 top-full mt-2 bg-white border border-rules-light shadow-xl z-50">
-              <div className="p-3 border-b border-rules-light text-xs font-mono text-text-dark-secondary uppercase">Select Wallet</div>
+            <div className="wallet-menu">
+              <div className="wallet-menu-title">Select Wallet</div>
               {providers.map(p => (
                 <button 
                   key={p.info.uuid}
@@ -125,7 +125,7 @@ export function AdjudicateAction({ warrantId, method }: AdjudicateActionProps) {
                     setShowWalletSelector(false);
                     connectToProvider(p);
                   }}
-                  className="w-full text-left px-4 py-3 text-sm text-text-dark hover:bg-surface-pale-gray flex items-center gap-3 transition-colors"
+                  className="wallet-option"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={p.info.icon} alt="" className="w-5 h-5" />
@@ -138,19 +138,19 @@ export function AdjudicateAction({ warrantId, method }: AdjudicateActionProps) {
       ) : (
         <div className="space-y-4 font-mono text-sm">
           <div className="flex items-center gap-4">
-            <div className={`w-3 h-3 rounded-full ${submittedActive ? 'bg-[#2B5CFF] animate-pulse' : submittedComplete ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+            <div className={`w-3 h-3 rounded-full ${submittedActive ? 'bg-accent animate-pulse' : submittedComplete ? 'bg-positive' : 'bg-gray-300'}`}></div>
             <div className={submittedActive ? 'text-text-dark' : submittedComplete ? 'text-text-dark-secondary' : 'text-text-dark-secondary/50'}>{submittedActive ? "Awaiting wallet authorization / submission" : "Submitted"}</div>
           </div>
           <div className="flex items-center gap-4">
-            <div className={`w-3 h-3 rounded-full ${processingActive ? 'bg-[#2B5CFF] animate-pulse' : processingComplete ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+            <div className={`w-3 h-3 rounded-full ${processingActive ? 'bg-accent animate-pulse' : processingComplete ? 'bg-positive' : 'bg-gray-300'}`}></div>
             <div className={processingActive ? 'text-text-dark' : processingComplete ? 'text-text-dark-secondary' : 'text-text-dark-secondary/50'}>Processing</div>
           </div>
           <div className="flex items-center gap-4">
-            <div className={`w-3 h-3 rounded-full ${decisionActive ? 'bg-[#2B5CFF] animate-pulse' : decisionComplete ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+            <div className={`w-3 h-3 rounded-full ${decisionActive ? 'bg-accent animate-pulse' : decisionComplete ? 'bg-positive' : 'bg-gray-300'}`}></div>
             <div className={decisionActive ? 'text-text-dark' : decisionComplete ? 'text-text-dark-secondary' : 'text-text-dark-secondary/50'}>Decision Reached</div>
           </div>
           <div className="flex items-center gap-4">
-            <div className={`w-3 h-3 rounded-full ${finalizedSuccess ? 'bg-green-500' : finalizedError ? 'bg-red-500' : 'bg-gray-300'}`}></div>
+            <div className={`w-3 h-3 rounded-full ${finalizedSuccess ? 'bg-positive' : finalizedError ? 'bg-negative' : 'bg-gray-300'}`}></div>
             <div className={finalizedSuccess || finalizedError ? 'text-text-dark font-bold' : 'text-text-dark-secondary/50'}>
               {finalizedSuccess ? 'Finalized - Execution Verified' : 
                finalizedError ? 'Finalized - Execution Failed' : 
