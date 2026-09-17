@@ -21,6 +21,11 @@ interface ComparisonDraft {
   sessionId: string;
 }
 
+interface SavedWarrantRef {
+  sessionId: string;
+  warrantId: string;
+}
+
 const LOW_KEY = "proofdata:compare-low-id";
 const HIGH_KEY = "proofdata:compare-high-id";
 const DRAFT_KEY = "proofdata:compare-draft";
@@ -30,6 +35,24 @@ const DEFAULT_HIGH = "Use this evidence alone to make a high-value or hard-to-re
 function newSessionId() {
   if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
   return `comparison-${Date.now()}`;
+}
+
+function readSavedWarrant(key: string, sessionId: string) {
+  const raw = localStorage.getItem(key);
+  if (!raw) return "";
+
+  try {
+    const parsed = JSON.parse(raw) as SavedWarrantRef;
+    if (parsed?.sessionId === sessionId && typeof parsed.warrantId === "string") return parsed.warrantId;
+    return "";
+  } catch {
+    // Migrate the previous plain-string format only when a comparison draft exists.
+    if (raw.startsWith("warrant-") && sessionId) {
+      localStorage.setItem(key, JSON.stringify({ sessionId, warrantId: raw }));
+      return raw;
+    }
+    return "";
+  }
 }
 
 export function CompareYourEvidence() {
@@ -49,26 +72,33 @@ export function CompareYourEvidence() {
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    setLeftId(localStorage.getItem(LOW_KEY) || "");
-    setRightId(localStorage.getItem(HIGH_KEY) || "");
-
     const saved = localStorage.getItem(DRAFT_KEY);
+    let restoredSession = newSessionId();
+    let hasDraft = false;
+
     if (saved) {
       try {
         const draft = JSON.parse(saved) as ComparisonDraft;
+        hasDraft = true;
+        restoredSession = typeof draft.sessionId === "string" && draft.sessionId ? draft.sessionId : restoredSession;
         setUrl(typeof draft.url === "string" ? draft.url : "");
         setLowAction(typeof draft.lowAction === "string" && draft.lowAction ? draft.lowAction : DEFAULT_LOW);
         setHighAction(typeof draft.highAction === "string" && draft.highAction ? draft.highAction : DEFAULT_HIGH);
         setRequirements(typeof draft.requirements === "string" ? draft.requirements : "");
         setSnapshotText(typeof draft.snapshotText === "string" ? draft.snapshotText : "");
-        setSessionId(typeof draft.sessionId === "string" && draft.sessionId ? draft.sessionId : newSessionId());
         if (draft.prepared?.url && draft.prepared?.hash) setPrepared(draft.prepared);
       } catch {
         localStorage.removeItem(DRAFT_KEY);
-        setSessionId(newSessionId());
       }
+    }
+
+    setSessionId(restoredSession);
+    if (hasDraft) {
+      setLeftId(readSavedWarrant(LOW_KEY, restoredSession));
+      setRightId(readSavedWarrant(HIGH_KEY, restoredSession));
     } else {
-      setSessionId(newSessionId());
+      localStorage.removeItem(LOW_KEY);
+      localStorage.removeItem(HIGH_KEY);
     }
     setHydrated(true);
   }, []);
@@ -79,11 +109,34 @@ export function CompareYourEvidence() {
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
   }, [hydrated, url, lowAction, highAction, requirements, prepared, snapshotText, sessionId]);
 
+  useEffect(() => {
+    if (!hydrated || !sessionId) return;
+    if (leftId.trim()) localStorage.setItem(LOW_KEY, JSON.stringify({ sessionId, warrantId: leftId.trim() }));
+    else localStorage.removeItem(LOW_KEY);
+    if (rightId.trim()) localStorage.setItem(HIGH_KEY, JSON.stringify({ sessionId, warrantId: rightId.trim() }));
+    else localStorage.removeItem(HIGH_KEY);
+  }, [hydrated, sessionId, leftId, rightId]);
+
   const clearComparisonIds = () => {
     setLeftId("");
     setRightId("");
     localStorage.removeItem(LOW_KEY);
     localStorage.removeItem(HIGH_KEY);
+  };
+
+  const clearSide = (side: "LOW" | "HIGH") => {
+    if (side === "LOW") {
+      setLeftId("");
+      localStorage.removeItem(LOW_KEY);
+    } else {
+      setRightId("");
+      localStorage.removeItem(HIGH_KEY);
+    }
+  };
+
+  const resetComparisonIdentity = () => {
+    setSessionId(newSessionId());
+    clearComparisonIds();
   };
 
   const prepare = async () => {
@@ -104,8 +157,7 @@ export function CompareYourEvidence() {
       }
       setPrepared(data);
       setUrl(data.url);
-      setSessionId(newSessionId());
-      clearComparisonIds();
+      resetComparisonIdentity();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to prepare this evidence.");
     } finally {
@@ -126,8 +178,7 @@ export function CompareYourEvidence() {
       if (!response.ok) throw new Error(data.error || "Unable to create a fixed evidence snapshot.");
       setPrepared(data);
       setSnapshotRecommended(false);
-      setSessionId(newSessionId());
-      clearComparisonIds();
+      resetComparisonIdentity();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to create a fixed evidence snapshot.");
     } finally {
@@ -144,8 +195,7 @@ export function CompareYourEvidence() {
     setError(null);
     setSnapshotRecommended(false);
     setSnapshotText("");
-    setSessionId(newSessionId());
-    clearComparisonIds();
+    resetComparisonIdentity();
     localStorage.removeItem(DRAFT_KEY);
   };
 
@@ -163,8 +213,10 @@ export function CompareYourEvidence() {
     return `/create?${params.toString()}`;
   };
 
-  const lowHref = leftId.trim() ? `/warrant/${encodeURIComponent(leftId.trim())}?compareRole=LOW` : createHref("LOW", lowAction);
-  const highHref = rightId.trim() ? `/warrant/${encodeURIComponent(rightId.trim())}?compareRole=HIGH` : createHref("HIGH", highAction);
+  const lowQuery = `?compareRole=LOW${sessionId ? `&compareSession=${encodeURIComponent(sessionId)}` : ""}`;
+  const highQuery = `?compareRole=HIGH${sessionId ? `&compareSession=${encodeURIComponent(sessionId)}` : ""}`;
+  const lowHref = leftId.trim() ? `/warrant/${encodeURIComponent(leftId.trim())}${lowQuery}` : createHref("LOW", lowAction);
+  const highHref = rightId.trim() ? `/warrant/${encodeURIComponent(rightId.trim())}${highQuery}` : createHref("HIGH", highAction);
   const compareHref = leftId.trim() && rightId.trim()
     ? `/compare?left=${encodeURIComponent(leftId.trim())}&right=${encodeURIComponent(rightId.trim())}`
     : "";
@@ -193,6 +245,7 @@ export function CompareYourEvidence() {
               setPrepared(null);
               setError(null);
               setSnapshotRecommended(false);
+              resetComparisonIdentity();
             }}
           />
         </div>
@@ -241,15 +294,18 @@ export function CompareYourEvidence() {
       <section className="form-stage">
         <div className="field-group">
           <label htmlFor="lowAction">LOW reliance — what small or reversible action might you take?</label>
-          <textarea id="lowAction" className="form-input purpose-input" rows={3} value={lowAction} onChange={event => setLowAction(event.target.value)} />
+          <textarea id="lowAction" className="form-input purpose-input" rows={3} value={lowAction} onChange={event => { setLowAction(event.target.value); if (leftId) clearSide("LOW"); }} />
+          {leftId && <p className="form-hint">Editing this action will require a new LOW warrant.</p>}
         </div>
         <div className="field-group">
           <label htmlFor="highAction">HIGH reliance — what serious action might you take using this evidence alone?</label>
-          <textarea id="highAction" className="form-input purpose-input" rows={3} value={highAction} onChange={event => setHighAction(event.target.value)} />
+          <textarea id="highAction" className="form-input purpose-input" rows={3} value={highAction} onChange={event => { setHighAction(event.target.value); if (rightId) clearSide("HIGH"); }} />
+          {rightId && <p className="form-hint">Editing this action will require a new HIGH warrant.</p>}
         </div>
         <div className="field-group">
           <label htmlFor="compareRequirements">Extra requirements (optional, one per line)</label>
-          <textarea id="compareRequirements" className="form-input" rows={2} value={requirements} onChange={event => setRequirements(event.target.value)} />
+          <textarea id="compareRequirements" className="form-input" rows={2} value={requirements} onChange={event => { setRequirements(event.target.value); if (leftId || rightId) clearComparisonIds(); }} />
+          {(leftId || rightId) && <p className="form-hint">Changing shared requirements requires new LOW and HIGH warrants.</p>}
         </div>
       </section>
 
@@ -274,7 +330,7 @@ export function CompareYourEvidence() {
           <label htmlFor="rightWarrant">HIGH warrant ID</label>
           <input id="rightWarrant" className="form-input form-input--technical" value={rightId} onChange={event => setRightId(event.target.value)} placeholder="warrant-..." />
         </div>
-        {compareHref ? <a className="button button--primary" href={compareHref}>COMPARE MY WARRANTS →</a> : <button type="button" className="button button--primary" disabled>CREATE BOTH WARRANTS TO COMPARE</button>}
+        {compareHref ? <a className="button button--primary" href={compareHref}>CHECK COMPARISON STATUS →</a> : <button type="button" className="button button--primary" disabled>CREATE BOTH WARRANTS TO COMPARE</button>}
       </section>
     </section>
   );
