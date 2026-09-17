@@ -5,13 +5,14 @@ import { keccak256, toHex } from "viem";
 export const runtime = "nodejs";
 
 const MAX_INPUT_CHARS = 12_000;
-const MAX_TOKEN_CHARS = 12_000;
+const MAX_TOKEN_CHARS = 8_000;
 const MAX_SNAPSHOT_BYTES = 24 * 1024;
 
 function normalizeSourceUrl(value: unknown) {
   if (typeof value !== "string" || !value.trim()) throw new Error("Paste the original public HTTPS link first.");
   const url = new URL(value.trim());
   if (url.protocol !== "https:") throw new Error("The original source must use HTTPS.");
+  if (url.username || url.password) throw new Error("Links with embedded usernames or passwords are not supported.");
   return url.toString();
 }
 
@@ -43,7 +44,7 @@ export async function POST(request: Request) {
     if (bytes.byteLength > MAX_SNAPSHOT_BYTES) throw new Error("This snapshot is too large for the current prototype.");
 
     const token = deflateRawSync(Buffer.from(bytes), { level: 9 }).toString("base64url");
-    if (token.length > MAX_TOKEN_CHARS) throw new Error("This snapshot is too large to create a stable evidence URL.");
+    if (token.length > MAX_TOKEN_CHARS) throw new Error("This snapshot is too large to fit safely in a stable evidence URL. Use a shorter excerpt containing the claims relevant to your decision.");
 
     const origin = new URL(request.url).origin;
     const url = `${origin}/api/evidence/snapshot?d=${encodeURIComponent(token)}`;
@@ -70,10 +71,9 @@ export async function GET(request: Request) {
     if (!token || token.length > MAX_TOKEN_CHARS) return new Response("Invalid snapshot.", { status: 400 });
 
     const packed = Buffer.from(token, "base64url");
-    const decoded = inflateRawSync(packed);
-    if (decoded.byteLength > MAX_SNAPSHOT_BYTES) return new Response("Snapshot too large.", { status: 413 });
-
+    const decoded = inflateRawSync(packed, { maxOutputLength: MAX_SNAPSHOT_BYTES });
     const text = new TextDecoder("utf-8", { fatal: true }).decode(decoded);
+
     return new Response(text, {
       status: 200,
       headers: {
