@@ -10,9 +10,10 @@ export interface TrackedTransaction { txHash: string; outerTxHash?: string; warr
 export function useTrackedTransaction(key: string) {
   const searchParams = useSearchParams();
   const compareRole = searchParams.get("compareRole");
+  const compareSession = searchParams.get("compareSession") || "";
   const evidenceHash = searchParams.get("hash") || "";
   const comparisonScope = key === "create" && (compareRole === "LOW" || compareRole === "HIGH")
-    ? `:${compareRole}:${evidenceHash.slice(0, 24) || "no-hash"}`
+    ? `:${compareRole}:${compareSession || evidenceHash.slice(0, 24) || "comparison"}`
     : "";
   const storageKey = PROOFDATA_STORAGE_PREFIX + key + comparisonScope;
 
@@ -21,8 +22,6 @@ export function useTrackedTransaction(key: string) {
   const [warrantStatus, setWarrantStatus] = useState<string | null>(null);
 
   useEffect(() => {
-    // LOW and HIGH comparison pages can reuse the same client component instance.
-    // Clear the visible tracker before restoring the transaction for the new scope.
     setTracked(null);
     setInfo({ state: "IDLE" });
     setWarrantStatus(null);
