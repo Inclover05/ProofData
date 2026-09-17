@@ -9,24 +9,57 @@ interface PreparedEvidence {
   contentType: string;
 }
 
+interface ComparisonDraft {
+  url: string;
+  lowAction: string;
+  highAction: string;
+  requirements: string;
+  prepared: PreparedEvidence | null;
+}
+
 const LOW_KEY = "proofdata:compare-low-id";
 const HIGH_KEY = "proofdata:compare-high-id";
+const DRAFT_KEY = "proofdata:compare-draft";
+const DEFAULT_LOW = "Use this evidence to decide whether I should take a small, reversible next step.";
+const DEFAULT_HIGH = "Use this evidence alone to make a high-value or hard-to-reverse decision.";
 
 export function CompareYourEvidence() {
   const [url, setUrl] = useState("");
-  const [lowAction, setLowAction] = useState("Use this evidence to decide whether I should take a small, reversible next step.");
-  const [highAction, setHighAction] = useState("Use this evidence alone to make a high-value or hard-to-reverse decision.");
+  const [lowAction, setLowAction] = useState(DEFAULT_LOW);
+  const [highAction, setHighAction] = useState(DEFAULT_HIGH);
   const [requirements, setRequirements] = useState("");
   const [prepared, setPrepared] = useState<PreparedEvidence | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [leftId, setLeftId] = useState("");
   const [rightId, setRightId] = useState("");
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     setLeftId(localStorage.getItem(LOW_KEY) || "");
     setRightId(localStorage.getItem(HIGH_KEY) || "");
+
+    const saved = localStorage.getItem(DRAFT_KEY);
+    if (saved) {
+      try {
+        const draft = JSON.parse(saved) as ComparisonDraft;
+        setUrl(typeof draft.url === "string" ? draft.url : "");
+        setLowAction(typeof draft.lowAction === "string" && draft.lowAction ? draft.lowAction : DEFAULT_LOW);
+        setHighAction(typeof draft.highAction === "string" && draft.highAction ? draft.highAction : DEFAULT_HIGH);
+        setRequirements(typeof draft.requirements === "string" ? draft.requirements : "");
+        if (draft.prepared?.url && draft.prepared?.hash) setPrepared(draft.prepared);
+      } catch {
+        localStorage.removeItem(DRAFT_KEY);
+      }
+    }
+    setHydrated(true);
   }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    const draft: ComparisonDraft = { url, lowAction, highAction, requirements, prepared };
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  }, [hydrated, url, lowAction, highAction, requirements, prepared]);
 
   const prepare = async () => {
     setLoading(true);
@@ -51,6 +84,20 @@ export function CompareYourEvidence() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const startOver = () => {
+    setUrl("");
+    setLowAction(DEFAULT_LOW);
+    setHighAction(DEFAULT_HIGH);
+    setRequirements("");
+    setPrepared(null);
+    setError(null);
+    setLeftId("");
+    setRightId("");
+    localStorage.removeItem(LOW_KEY);
+    localStorage.removeItem(HIGH_KEY);
+    localStorage.removeItem(DRAFT_KEY);
   };
 
   const createHref = (risk: "LOW" | "HIGH", action: string) => {
@@ -92,18 +139,23 @@ export function CompareYourEvidence() {
             onChange={event => {
               setUrl(event.target.value);
               setPrepared(null);
+              setError(null);
             }}
           />
         </div>
-        <button type="button" className="button button--secondary" onClick={prepare} disabled={loading || !url.trim()}>
-          {loading ? "CHECKING EVIDENCE..." : "PREPARE EVIDENCE"}
-        </button>
-        <p className="form-hint">ProofData fetches the page twice. If the exact bytes stay stable, it creates the cryptographic identity for you.</p>
+        <div className="hero-actions">
+          <button type="button" className="button button--secondary" onClick={prepare} disabled={loading || !url.trim()}>
+            {loading ? "CHECKING EVIDENCE..." : "PREPARE EVIDENCE"}
+          </button>
+          {(url || prepared || leftId || rightId) && <button type="button" className="button button--secondary" onClick={startOver}>START OVER</button>}
+        </div>
+        <p className="form-hint">ProofData fetches the page twice. If the exact bytes stay stable, it creates the cryptographic identity for you. Changing pages are rejected before you sign.</p>
         {error && <div className="error-notice">{error}</div>}
         {prepared && (
           <div className="bg-white p-4 border border-rules-light text-xs font-mono text-text-dark-secondary mt-4 space-y-2">
             <div><span className="text-text-dark font-semibold">Evidence ready:</span> {prepared.bytes.toLocaleString()} bytes</div>
             <div className="break-all"><span className="text-text-dark font-semibold">Keccak-256:</span> {prepared.hash}</div>
+            <div className="break-all"><span className="text-text-dark font-semibold">Locked URL:</span> {prepared.url}</div>
             <div><span className="text-text-dark font-semibold">Type:</span> {prepared.contentType || "text"}</div>
           </div>
         )}
@@ -126,7 +178,7 @@ export function CompareYourEvidence() {
 
       <section className="form-stage">
         <header className="form-stage-header"><h3>Run both real warrants</h3></header>
-        <p className="form-hint">Start with LOW. Finish its evidence check and judgment. Return here, run HIGH with the same evidence, then compare both results.</p>
+        <p className="form-hint">Start with LOW. Finish its evidence check and judgment. Return to Compare; your evidence and text will still be here. Then run HIGH from the same locked evidence.</p>
         <div className="hero-actions">
           <a className={`button button--primary ${!prepared ? "pointer-events-none opacity-50" : ""}`} href={createHref("LOW", lowAction)}>{leftId ? "LOW WARRANT SAVED ✓" : "CREATE LOW WARRANT ↗"}</a>
           <a className={`button button--secondary ${!prepared ? "pointer-events-none opacity-50" : ""}`} href={createHref("HIGH", highAction)}>{rightId ? "HIGH WARRANT SAVED ✓" : "CREATE HIGH WARRANT ↗"}</a>
