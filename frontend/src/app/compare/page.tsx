@@ -7,6 +7,8 @@ import { readWarrant } from "@/lib/genlayer/warrant-reader";
 
 export const dynamic = "force-dynamic";
 
+const FINAL_STATES = new Set(["WARRANTED", "CONDITIONAL", "NOT_WARRANTED", "INCONCLUSIVE"]);
+
 export default async function ComparePage({ searchParams }: { searchParams: Promise<{ left?: string | string[]; right?: string | string[] }> }) {
   const query = await searchParams;
   const hasCustomPair = typeof query.left === "string" || typeof query.right === "string";
@@ -28,20 +30,51 @@ export default async function ComparePage({ searchParams }: { searchParams: Prom
     <div className="section-heading" style={{ marginTop: "4rem" }}>
       <div>
         <span className="eyebrow">{hasCustomPair ? "YOUR CONTRACT READS" : "REFERENCE EXAMPLE"}</span>
-        <h2 className="editorial">{hasCustomPair ? "Your finished comparison." : "See how a finished comparison looks."}</h2>
+        <h2 className="editorial">{hasCustomPair ? "Your comparison status." : "See how a finished comparison looks."}</h2>
       </div>
-      <p>{hasCustomPair ? "These records are read from the Bradbury contract." : "This existing finalized pair stays available as a working example while you create your own."}</p>
+      <p>{hasCustomPair ? "These records are read directly from the Bradbury contract." : "This existing finalized pair stays available as a working example while you create your own."}</p>
     </div>
 
     {!leftData || !rightData ? (
       <div className="empty-state glass">
-        <span className="eyebrow">BRADBURY / READ UNAVAILABLE</span><h2>Comparison unavailable</h2>
-        <p>Unable to read both warrant IDs. Check the IDs above, or wait until both warrants have been created on Bradbury.</p>
+        <span className="eyebrow">BRADBURY / READ UNAVAILABLE</span><h2>Comparison not ready</h2>
+        <p>ProofData could not read both warrant IDs yet. Open each saved warrant above, make sure it was created successfully, then try again.</p>
         <p className="metadata">LOW: {leftId} ({leftData ? "FOUND" : "READ UNAVAILABLE"})<br/>HIGH: {rightId} ({rightData ? "FOUND" : "READ UNAVAILABLE"})</p>
-        <a href="/compare" className="button button--secondary">Show reference example</a>
+        <a href="/compare" className="button button--secondary">Return to comparison builder</a>
       </div>
-    ) : <ComparisonResult leftData={leftData} rightData={rightData} />}
+    ) : <ComparisonGate leftData={leftData} rightData={rightData} />}
   </div>;
+}
+
+function ComparisonGate({ leftData, rightData }: { leftData: Awaited<ReturnType<typeof readWarrant>>; rightData: Awaited<ReturnType<typeof readWarrant>> }) {
+  const leftFinal = FINAL_STATES.has(leftData.status);
+  const rightFinal = FINAL_STATES.has(rightData.status);
+  const roleMismatch = leftData.risk_level !== "LOW" || rightData.risk_level !== "HIGH";
+
+  if (!leftFinal || !rightFinal) {
+    return <div className="empty-state glass">
+      <span className="eyebrow">COMPARISON / WAITING FOR FINAL STATES</span>
+      <h2>Both warrants exist, but the comparison is not finished yet.</h2>
+      <p>LOW and HIGH can progress independently. Finish any pending evidence validation or adjudication before treating the pair as a final comparison.</p>
+      <p className="metadata">LOW / {leftData.status}<br/>HIGH / {rightData.status}</p>
+      <div className="hero-actions">
+        {!leftFinal && <Link href={`/warrant/${encodeURIComponent(leftData.id)}?compareRole=LOW`} className="button button--primary">CONTINUE LOW WARRANT →</Link>}
+        {!rightFinal && <Link href={`/warrant/${encodeURIComponent(rightData.id)}?compareRole=HIGH`} className="button button--secondary">CONTINUE HIGH WARRANT →</Link>}
+      </div>
+    </div>;
+  }
+
+  if (roleMismatch) {
+    return <div className="empty-state glass">
+      <span className="eyebrow">COMPARISON / ROLE MISMATCH</span>
+      <h2>These warrants are not a LOW/HIGH pair.</h2>
+      <p>The left warrant must be LOW risk and the right warrant must be HIGH risk for this controlled comparison.</p>
+      <p className="metadata">LEFT / {leftData.risk_level}<br/>RIGHT / {rightData.risk_level}</p>
+      <Link href="/compare" className="button button--secondary">Return to comparison builder</Link>
+    </div>;
+  }
+
+  return <ComparisonResult leftData={leftData} rightData={rightData} />;
 }
 
 function ComparisonResult({ leftData, rightData }: { leftData: Awaited<ReturnType<typeof readWarrant>>; rightData: Awaited<ReturnType<typeof readWarrant>> }) {
@@ -60,7 +93,7 @@ function ComparisonResult({ leftData, rightData }: { leftData: Awaited<ReturnTyp
       </div>
       <div className="compare-hub"><Fingerprint/><span className="eyebrow">RELIANCE CONTEXT</span></div><BranchPaths/>
       <div className="context-grid"><ContextPanel warrant={leftData}/><ContextPanel warrant={rightData}/></div>
-      <div className="compare-conclusion"><p>{isSameEvidence ? "The evidence didn’t change. The consequence did." : "Different evidence identities. Inspect each warrant."}</p><Link href="/create" className="button button--secondary">Create another warrant <span aria-hidden="true">↗</span></Link></div>
+      <div className="compare-conclusion"><p>{isSameEvidence && sameRequirements ? "The evidence didn’t change. The consequence did." : isSameEvidence ? "The evidence matches, but the requirements differ. This is not a controlled reliance comparison." : "Different evidence identities. Inspect each warrant."}</p><Link href="/compare" className="button button--secondary">Start another comparison <span aria-hidden="true">↗</span></Link></div>
     </section>
     <div className="compare-contract"><span className="field-label">SHARED CONTRACT / AUTHORITATIVE SOURCE</span><CopyValue value={FINAL_PROOF.contractAddress} label="contract address"/></div>
   </>;
