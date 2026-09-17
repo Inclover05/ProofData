@@ -91,7 +91,11 @@ async function fetchEvidence(input: string) {
       continue;
     }
 
-    if (!response.ok) throw new Error(`The evidence page returned HTTP ${response.status}.`);
+    if (!response.ok) {
+      const error = new Error(`The evidence page returned HTTP ${response.status}.`) as Error & { status?: number };
+      error.status = response.status;
+      throw error;
+    }
 
     const contentType = response.headers.get("content-type") || "";
     if (!isTextLike(contentType)) {
@@ -132,17 +136,19 @@ export async function POST(request: Request) {
       first = await fetchEvidence(body.url.trim());
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to fetch this evidence.";
-      return NextResponse.json({ error: message }, { status: 422 });
+      const status = typeof error === "object" && error && "status" in error ? Number((error as { status?: unknown }).status) : 0;
+      const snapshotRecommended = status === 401 || status === 403 || status === 429;
+      return NextResponse.json({ error: message, snapshotRecommended, reason: snapshotRecommended ? "blocked" : "fetch" }, { status: 422 });
     }
 
-    // Exact-byte warrants work best with stable resources. Fetch twice before the user
-    // spends a testnet transaction so obviously dynamic pages fail early and clearly.
     let second;
     try {
       second = await fetchEvidence(first.resolvedUrl);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to verify this evidence a second time.";
-      return NextResponse.json({ error: message }, { status: 422 });
+      const status = typeof error === "object" && error && "status" in error ? Number((error as { status?: unknown }).status) : 0;
+      const snapshotRecommended = status === 401 || status === 403 || status === 429;
+      return NextResponse.json({ error: message, snapshotRecommended, reason: snapshotRecommended ? "blocked" : "fetch" }, { status: 422 });
     }
 
     const firstHash = keccak256(toHex(first.bytes)).slice(2);
@@ -151,8 +157,10 @@ export async function POST(request: Request) {
     if (firstHash !== secondHash) {
       return NextResponse.json(
         {
-          error: "This page changes between requests, so it cannot be locked as exact evidence yet. Use a stable/raw text URL or a fixed snapshot of the page.",
+          error: "This page changes between requests, so the full webpage cannot be locked byte-for-byte.",
           unstable: true,
+          snapshotRecommended: true,
+          reason: "unstable",
         },
         { status: 422 },
       );
