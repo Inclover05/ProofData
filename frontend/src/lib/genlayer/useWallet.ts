@@ -4,7 +4,7 @@ import { createClient } from "genlayer-js";
 import { PROOFDATA_CHAIN, PROOFDATA_CONTRACT } from "./config.ts";
 import { BrowserProvider, ensureBradburyNetwork, selectWalletProvider, withBradburyGasHeadroom, walletErrorMessage } from "./browser-provider.ts";
 
-declare global { interface Window { ethereum?: BrowserProvider; } }
+declare global { interface Window { ethereum?: BrowserProvider; okxwallet?: BrowserProvider; } }
 export interface EIP6963ProviderInfo { uuid: string; name: string; icon: string; rdns: string; }
 export interface EIP6963ProviderDetail { info: EIP6963ProviderInfo; provider: BrowserProvider; }
 export type WarrantWriteMethod = "create_warrant" | "retrieve_and_validate" | "adjudicate";
@@ -17,6 +17,7 @@ type LegacyInjectedProvider = BrowserProvider & {
   isRabby?: boolean;
   isBraveWallet?: boolean;
   isTrust?: boolean;
+  isOkxWallet?: boolean;
 };
 
 const WALLET_SELECTION_KEY = "proofdata:selected-wallet";
@@ -28,18 +29,19 @@ function legacyProviderName(provider: BrowserProvider, index: number) {
   if (candidate.isCoinbaseWallet) return "Coinbase Wallet";
   if (candidate.isBraveWallet) return "Brave Wallet";
   if (candidate.isTrust) return "Trust Wallet";
+  if (candidate.isOkxWallet) return "OKX Wallet";
   if (candidate.isMetaMask) return "MetaMask";
   return index === 0 ? "Browser Wallet" : `Browser Wallet ${index + 1}`;
 }
 
-function legacyProviderDetails(ethereum?: BrowserProvider): EIP6963ProviderDetail[] {
+function legacyProviderDetails(ethereum?: BrowserProvider, forcedName?: string): EIP6963ProviderDetail[] {
   if (!ethereum) return [];
   const root = ethereum as LegacyInjectedProvider;
   const candidates = Array.isArray(root.providers) && root.providers.length > 0 ? root.providers : [ethereum];
   return candidates
     .filter((provider): provider is BrowserProvider => !!provider && typeof provider.request === "function")
     .map((provider, index) => {
-      const name = legacyProviderName(provider, index);
+      const name = forcedName ?? legacyProviderName(provider, index);
       return {
         info: {
           uuid: `legacy-${index}-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
@@ -50,6 +52,15 @@ function legacyProviderDetails(ethereum?: BrowserProvider): EIP6963ProviderDetai
         provider,
       };
     });
+}
+
+function allLegacyProviderDetails(): EIP6963ProviderDetail[] {
+  if (typeof window === "undefined") return [];
+  const details = [
+    ...legacyProviderDetails(window.ethereum),
+    ...legacyProviderDetails(window.okxwallet, "OKX Wallet"),
+  ];
+  return details.filter((detail, index) => details.findIndex(candidate => candidate.provider === detail.provider) === index);
 }
 
 function providerStorageKey(detail: EIP6963ProviderDetail) {
@@ -67,7 +78,7 @@ export function useWallet() {
   const [activeProvider, setActiveProvider] = useState<BrowserProvider | null>(null);
   const outerHashRef = useRef<string | undefined>(undefined);
   const restoredRef = useRef(false);
-  const hasLegacyEthereum = typeof window !== "undefined" && !!window.ethereum;
+  const hasLegacyEthereum = typeof window !== "undefined" && (!!window.ethereum || !!window.okxwallet);
 
   const setupClientWithProvider = useCallback((accountAddress: string, provider: BrowserProvider) => {
     const adapted = withBradburyGasHeadroom(provider, hash => { outerHashRef.current = hash; });
@@ -118,7 +129,7 @@ export function useWallet() {
   }, [setupClientWithProvider, syncNetworkLabel]);
 
   useEffect(() => {
-    for (const detail of legacyProviderDetails(window.ethereum)) {
+    for (const detail of allLegacyProviderDetails()) {
       registerProvider(detail);
       void restoreAuthorizedProvider(detail);
     }
@@ -160,8 +171,9 @@ export function useWallet() {
     setIsConnecting(true);
     setError(null);
     try {
-      const fallbackDetail = detail ?? legacyProviderDetails(window.ethereum)[0] ?? null;
-      const provider = selectWalletProvider(fallbackDetail?.provider, window.ethereum);
+      const fallbackDetail = detail ?? allLegacyProviderDetails()[0] ?? null;
+      const fallbackProvider = typeof window !== "undefined" ? (window.ethereum ?? window.okxwallet) : undefined;
+      const provider = selectWalletProvider(fallbackDetail?.provider, fallbackProvider);
       if (!provider) throw new Error("No compatible browser wallet detected.");
       setSelectedProviderDetail(fallbackDetail);
       setActiveProvider(provider);
