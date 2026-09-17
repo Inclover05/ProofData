@@ -18,21 +18,45 @@ export function selectWalletProvider(explicit: BrowserProvider | undefined, lega
   return explicit ?? legacy;
 }
 
+function walletRequestRejected(error: unknown) {
+  const code = (error as { code?: number })?.code;
+  const message = error instanceof Error ? error.message : String(error);
+  return code === 4001 || /user rejected|user denied|request rejected/i.test(message);
+}
+
 export async function ensureBradburyNetwork(provider: BrowserProvider) {
   const isBradbury = async () => BigInt(String(await provider.request({ method: "eth_chainId" }))) === BigInt(PROOFDATA_CHAIN.id);
   if (await isBradbury()) return;
+
+  // First ask the selected EVM wallet to switch. If Bradbury is not already
+  // installed, wallets do not all return the exact same "unknown chain" code,
+  // so fall back to the standard wallet_addEthereumChain request unless the
+  // user explicitly rejected the switch.
   try {
     await provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: BRADBURY_CHAIN_HEX }] });
+    if (await isBradbury()) return;
   } catch (error) {
-    if ((error as { code?: number }).code !== 4902) throw error;
-    await provider.request({ method: "wallet_addEthereumChain", params: [{
-      chainId: BRADBURY_CHAIN_HEX,
-      chainName: PROOFDATA_CHAIN.name,
-      rpcUrls: PROOFDATA_CHAIN.rpcUrls.default.http,
-      nativeCurrency: PROOFDATA_CHAIN.nativeCurrency,
-    }] });
-    await provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: BRADBURY_CHAIN_HEX }] });
+    if (walletRequestRejected(error)) throw error;
   }
+
+  await provider.request({ method: "wallet_addEthereumChain", params: [{
+    chainId: BRADBURY_CHAIN_HEX,
+    chainName: PROOFDATA_CHAIN.name,
+    rpcUrls: PROOFDATA_CHAIN.rpcUrls.default.http,
+    nativeCurrency: PROOFDATA_CHAIN.nativeCurrency,
+  }] });
+
+  // Some wallets switch to a newly-added chain automatically; others require
+  // a second explicit switch request. Support both behaviors.
+  if (!await isBradbury()) {
+    try {
+      await provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: BRADBURY_CHAIN_HEX }] });
+    } catch (error) {
+      if (walletRequestRejected(error)) throw error;
+      if (!await isBradbury()) throw error;
+    }
+  }
+
   if (!await isBradbury()) throw new Error("Wrong network. Switch the selected wallet to Bradbury (4221).");
 }
 
