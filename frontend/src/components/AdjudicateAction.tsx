@@ -116,7 +116,10 @@ export function AdjudicateAction({ warrantId, method }: AdjudicateActionProps) {
           </button>
 
           {showWalletSelector && !address && (
-            <div className="wallet-menu">
+            <div
+              className="wallet-menu"
+              style={{ top: "auto", bottom: "calc(100% + 9px)", maxHeight: "18rem", overflowY: "auto" }}
+            >
               <div className="wallet-menu-title">Select Wallet</div>
               {providers.map(p => (
                 <button 
@@ -141,14 +144,17 @@ export function AdjudicateAction({ warrantId, method }: AdjudicateActionProps) {
             <div className={`w-3 h-3 rounded-full ${submittedActive ? 'bg-accent animate-pulse' : submittedComplete ? 'bg-positive' : 'bg-gray-300'}`}></div>
             <div className={submittedActive ? 'text-text-dark' : submittedComplete ? 'text-text-dark-secondary' : 'text-text-dark-secondary/50'}>{submittedActive ? "Awaiting wallet authorization / submission" : "Submitted"}</div>
           </div>
+          
           <div className="flex items-center gap-4">
             <div className={`w-3 h-3 rounded-full ${processingActive ? 'bg-accent animate-pulse' : processingComplete ? 'bg-positive' : 'bg-gray-300'}`}></div>
             <div className={processingActive ? 'text-text-dark' : processingComplete ? 'text-text-dark-secondary' : 'text-text-dark-secondary/50'}>Processing</div>
           </div>
+
           <div className="flex items-center gap-4">
             <div className={`w-3 h-3 rounded-full ${decisionActive ? 'bg-accent animate-pulse' : decisionComplete ? 'bg-positive' : 'bg-gray-300'}`}></div>
             <div className={decisionActive ? 'text-text-dark' : decisionComplete ? 'text-text-dark-secondary' : 'text-text-dark-secondary/50'}>Decision Reached</div>
           </div>
+
           <div className="flex items-center gap-4">
             <div className={`w-3 h-3 rounded-full ${finalizedSuccess ? 'bg-positive' : finalizedError ? 'bg-negative' : 'bg-gray-300'}`}></div>
             <div className={finalizedSuccess || finalizedError ? 'text-text-dark font-bold' : 'text-text-dark-secondary/50'}>
