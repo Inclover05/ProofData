@@ -18,6 +18,7 @@ interface ComparisonDraft {
   requirements: string;
   prepared: PreparedEvidence | null;
   snapshotText: string;
+  sessionId: string;
 }
 
 const LOW_KEY = "proofdata:compare-low-id";
@@ -25,6 +26,11 @@ const HIGH_KEY = "proofdata:compare-high-id";
 const DRAFT_KEY = "proofdata:compare-draft";
 const DEFAULT_LOW = "Use this evidence to decide whether I should take a small, reversible next step.";
 const DEFAULT_HIGH = "Use this evidence alone to make a high-value or hard-to-reverse decision.";
+
+function newSessionId() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
+  return `comparison-${Date.now()}`;
+}
 
 export function CompareYourEvidence() {
   const [url, setUrl] = useState("");
@@ -39,6 +45,7 @@ export function CompareYourEvidence() {
   const [snapshotLoading, setSnapshotLoading] = useState(false);
   const [leftId, setLeftId] = useState("");
   const [rightId, setRightId] = useState("");
+  const [sessionId, setSessionId] = useState("");
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -54,19 +61,30 @@ export function CompareYourEvidence() {
         setHighAction(typeof draft.highAction === "string" && draft.highAction ? draft.highAction : DEFAULT_HIGH);
         setRequirements(typeof draft.requirements === "string" ? draft.requirements : "");
         setSnapshotText(typeof draft.snapshotText === "string" ? draft.snapshotText : "");
+        setSessionId(typeof draft.sessionId === "string" && draft.sessionId ? draft.sessionId : newSessionId());
         if (draft.prepared?.url && draft.prepared?.hash) setPrepared(draft.prepared);
       } catch {
         localStorage.removeItem(DRAFT_KEY);
+        setSessionId(newSessionId());
       }
+    } else {
+      setSessionId(newSessionId());
     }
     setHydrated(true);
   }, []);
 
   useEffect(() => {
-    if (!hydrated) return;
-    const draft: ComparisonDraft = { url, lowAction, highAction, requirements, prepared, snapshotText };
+    if (!hydrated || !sessionId) return;
+    const draft: ComparisonDraft = { url, lowAction, highAction, requirements, prepared, snapshotText, sessionId };
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-  }, [hydrated, url, lowAction, highAction, requirements, prepared, snapshotText]);
+  }, [hydrated, url, lowAction, highAction, requirements, prepared, snapshotText, sessionId]);
+
+  const clearComparisonIds = () => {
+    setLeftId("");
+    setRightId("");
+    localStorage.removeItem(LOW_KEY);
+    localStorage.removeItem(HIGH_KEY);
+  };
 
   const prepare = async () => {
     setLoading(true);
@@ -86,10 +104,8 @@ export function CompareYourEvidence() {
       }
       setPrepared(data);
       setUrl(data.url);
-      setLeftId("");
-      setRightId("");
-      localStorage.removeItem(LOW_KEY);
-      localStorage.removeItem(HIGH_KEY);
+      setSessionId(newSessionId());
+      clearComparisonIds();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to prepare this evidence.");
     } finally {
@@ -110,10 +126,8 @@ export function CompareYourEvidence() {
       if (!response.ok) throw new Error(data.error || "Unable to create a fixed evidence snapshot.");
       setPrepared(data);
       setSnapshotRecommended(false);
-      setLeftId("");
-      setRightId("");
-      localStorage.removeItem(LOW_KEY);
-      localStorage.removeItem(HIGH_KEY);
+      setSessionId(newSessionId());
+      clearComparisonIds();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to create a fixed evidence snapshot.");
     } finally {
@@ -130,10 +144,8 @@ export function CompareYourEvidence() {
     setError(null);
     setSnapshotRecommended(false);
     setSnapshotText("");
-    setLeftId("");
-    setRightId("");
-    localStorage.removeItem(LOW_KEY);
-    localStorage.removeItem(HIGH_KEY);
+    setSessionId(newSessionId());
+    clearComparisonIds();
     localStorage.removeItem(DRAFT_KEY);
   };
 
@@ -146,10 +158,13 @@ export function CompareYourEvidence() {
       risk,
       requirements,
       compareRole: risk,
+      compareSession: sessionId,
     });
     return `/create?${params.toString()}`;
   };
 
+  const lowHref = leftId.trim() ? `/warrant/${encodeURIComponent(leftId.trim())}?compareRole=LOW` : createHref("LOW", lowAction);
+  const highHref = rightId.trim() ? `/warrant/${encodeURIComponent(rightId.trim())}?compareRole=HIGH` : createHref("HIGH", highAction);
   const compareHref = leftId.trim() && rightId.trim()
     ? `/compare?left=${encodeURIComponent(leftId.trim())}&right=${encodeURIComponent(rightId.trim())}`
     : "";
@@ -240,16 +255,17 @@ export function CompareYourEvidence() {
 
       <section className="form-stage">
         <header className="form-stage-header"><h3>Run both real warrants</h3></header>
-        <p className="form-hint">Start with LOW. Finish its evidence check and judgment. Return to Compare; your evidence and text will still be here. Then run HIGH from the same locked evidence.</p>
+        <p className="form-hint">LOW and HIGH are separate warrants. You can create either one first, and one does not replace the other. Finish both validator flows before opening the final comparison.</p>
         <div className="hero-actions">
-          <a className={`button button--primary ${!prepared ? "pointer-events-none opacity-50" : ""}`} href={createHref("LOW", lowAction)}>{leftId ? "LOW WARRANT SAVED ✓" : "CREATE LOW WARRANT ↗"}</a>
-          <a className={`button button--secondary ${!prepared ? "pointer-events-none opacity-50" : ""}`} href={createHref("HIGH", highAction)}>{rightId ? "HIGH WARRANT SAVED ✓" : "CREATE HIGH WARRANT ↗"}</a>
+          <a className={`button button--primary ${!prepared && !leftId ? "pointer-events-none opacity-50" : ""}`} href={lowHref}>{leftId ? "OPEN LOW WARRANT ↗" : "CREATE LOW WARRANT ↗"}</a>
+          <a className={`button button--secondary ${!prepared && !rightId ? "pointer-events-none opacity-50" : ""}`} href={highHref}>{rightId ? "OPEN HIGH WARRANT ↗" : "CREATE HIGH WARRANT ↗"}</a>
         </div>
+        {(leftId || rightId) && <p className="form-hint mt-3">{leftId ? "LOW created. " : ""}{rightId ? "HIGH created. " : ""}A saved warrant opens its own lifecycle instead of creating a duplicate.</p>}
       </section>
 
       <section className="form-stage">
         <header className="form-stage-header"><h3>Open your final comparison</h3></header>
-        <p className="form-hint">ProofData remembers warrant IDs created from this browser. You can still edit them manually if needed.</p>
+        <p className="form-hint">ProofData remembers the two warrant IDs from this comparison. Open each saved warrant above and finish it before comparing the final results.</p>
         <div className="field-group">
           <label htmlFor="leftWarrant">LOW warrant ID</label>
           <input id="leftWarrant" className="form-input form-input--technical" value={leftId} onChange={event => setLeftId(event.target.value)} placeholder="warrant-..." />
@@ -258,7 +274,7 @@ export function CompareYourEvidence() {
           <label htmlFor="rightWarrant">HIGH warrant ID</label>
           <input id="rightWarrant" className="form-input form-input--technical" value={rightId} onChange={event => setRightId(event.target.value)} placeholder="warrant-..." />
         </div>
-        {compareHref ? <a className="button button--primary" href={compareHref}>COMPARE MY WARRANTS →</a> : <button type="button" className="button button--primary" disabled>COMPARE MY WARRANTS →</button>}
+        {compareHref ? <a className="button button--primary" href={compareHref}>COMPARE MY WARRANTS →</a> : <button type="button" className="button button--primary" disabled>CREATE BOTH WARRANTS TO COMPARE</button>}
       </section>
     </section>
   );
